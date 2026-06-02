@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import multer from 'multer';
 import { v4 as uuidv4 } from 'uuid';
 import { storage } from '../services/storageService';
-import { analyzeTranscript } from '../services/aiService';
+import { analyzeTranscript, analyzeTranscriptStream, synthesizeInterviews } from '../services/aiService';
 import { Interview } from '../types';
 
 export const analyzeRouter = Router();
@@ -112,6 +112,115 @@ analyzeRouter.post('/regenerate/:id', async (req: Request, res: Response): Promi
     res.json({ aiResult });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';
+    res.status(500).json({ error: message });
+  }
+});
+
+// ── Streaming endpoints (SSE) ─────────────────────────────────────────────────
+
+function sseSetup(res: Response) {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+}
+
+function sseSend(res: Response, event: object) {
+  res.write(`data: ${JSON.stringify(event)}\n\n`);
+}
+
+// POST /api/analyze/text/stream — stream a new transcript analysis
+analyzeRouter.post('/text/stream', async (req: Request, res: Response): Promise<void> => {
+  const { transcript, title } = req.body as { transcript?: string; title?: string };
+  if (!transcript?.trim()) {
+    res.status(400).json({ error: 'transcript is required' });
+    return;
+  }
+
+  sseSetup(res);
+
+  const id = uuidv4();
+  const interview: Interview = {
+    id,
+    title: title || 'Untitled Interview',
+    transcript,
+    fileName: 'manual-entry.txt',
+    uploadedAt: new Date().toISOString()
+  };
+  storage.saveInterview(interview);
+
+  try {
+    await analyzeTranscriptStream(
+      transcript,
+      id,
+      (accumulated) => sseSend(res, { type: 'chunk', accumulated }),
+      (aiResult) => {
+        storage.updateInterview(id, { aiResult });
+        sseSend(res, { type: 'done', id, aiResult });
+        res.end();
+      }
+    );
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    sseSend(res, { type: 'error', message });
+    res.end();
+  }
+});
+
+// POST /api/analyze/regenerate/:id/stream — stream a regeneration
+analyzeRouter.post('/regenerate/:id/stream', async (req: Request, res: Response): Promise<void> => {
+  const interview = storage.getInterview(req.params.id);
+  if (!interview) {
+    res.status(404).json({ error: 'Interview not found' });
+    return;
+  }
+
+  sseSetup(res);
+
+  try {
+    await analyzeTranscriptStream(
+      interview.transcript,
+      interview.id,
+      (accumulated) => sseSend(res, { type: 'chunk', accumulated }),
+      (aiResult) => {
+        storage.updateInterview(interview.id, { aiResult });
+        sseSend(res, { type: 'done', id: interview.id, aiResult });
+        res.end();
+      }
+    );
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    sseSend(res, { type: 'error', message });
+    res.end();
+  }
+});
+
+// ── Cross-interview synthesis ─────────────────────────────────────────────────
+
+analyzeRouter.post('/synthesize', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { interviewIds } = req.body as { interviewIds?: string[] };
+    if (!interviewIds || interviewIds.length < 2) {
+      res.status(400).json({ error: 'Select at least 2 interviews to synthesize' });
+      return;
+    }
+
+    const interviews = interviewIds
+      .map(id => storage.getInterview(id))
+      .filter((iv): iv is Interview => !!iv);
+
+    if (interviews.length < 2) {
+      res.status(400).json({ error: 'Could not find enough valid interviews' });
+      return;
+    }
+
+    const result = await synthesizeInterviews(
+      interviews.map(iv => ({ id: iv.id, title: iv.title, transcript: iv.transcript }))
+    );
+    res.json(result);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    console.error('[synthesize error]', message);
     res.status(500).json({ error: message });
   }
 });

@@ -3,6 +3,7 @@ import Upload from './pages/Upload';
 import Workspace from './pages/Workspace';
 import Insights from './pages/Insights';
 import Report from './pages/Report';
+import Synthesis from './pages/Synthesis';
 
 function Nav() {
   const loc = useLocation();
@@ -22,6 +23,9 @@ function Nav() {
         <Link to="/insights" className={isActive('/insights') ? 'active' : ''}>
           Insights
         </Link>
+        <Link to="/synthesis" className={isActive('/synthesis') ? 'active' : ''}>
+          Synthesis
+        </Link>
       </div>
     </nav>
   );
@@ -38,6 +42,7 @@ export default function App() {
           <Route path="/workspace/:id" element={<Workspace />} />
           <Route path="/insights" element={<Insights />} />
           <Route path="/report/:id" element={<Report />} />
+          <Route path="/synthesis" element={<Synthesis />} />
         </Routes>
       </main>
     </BrowserRouter>

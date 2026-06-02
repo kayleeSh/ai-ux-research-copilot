@@ -36,6 +36,26 @@ export interface Cluster {
   insightIds: string[];
 }
 
+export interface SynthesisPattern {
+  pattern: string;
+  description: string;
+  frequency: string;
+  quotes: string[];
+}
+
+export interface SynthesisResult {
+  id: string;
+  interviewIds: string[];
+  interviewCount: number;
+  overallSummary: string;
+  commonThemes: string[];
+  patterns: SynthesisPattern[];
+  differences: string[];
+  prioritizedPainPoints: string[];
+  recommendations: string[];
+  createdAt: string;
+}
+
 export interface Report {
   title: string;
   fileName: string;

@@ -1,4 +1,4 @@
-import { Interview, AIResult, Report } from '../types';
+import { Interview, AIResult, Report, SynthesisResult } from '../types';
 
 const BASE = '/api';
 
@@ -11,7 +11,54 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+// Read an SSE stream — calls onChunk with accumulated text, resolves when done
+async function readStream(
+  res: Response,
+  onChunk: (accumulated: string) => void
+): Promise<{ id: string; aiResult: AIResult }> {
+  if (!res.body) throw new Error('No response body');
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  return new Promise((resolve, reject) => {
+    const pump = async () => {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split('\n\n');
+        buffer = parts.pop() ?? '';
+
+        for (const part of parts) {
+          const line = part.trim();
+          if (!line.startsWith('data: ')) continue;
+          try {
+            const event = JSON.parse(line.slice(6)) as {
+              type: string;
+              accumulated?: string;
+              id?: string;
+              aiResult?: AIResult;
+              message?: string;
+            };
+            if (event.type === 'chunk' && event.accumulated) {
+              onChunk(event.accumulated);
+            } else if (event.type === 'done' && event.id && event.aiResult) {
+              resolve({ id: event.id, aiResult: event.aiResult });
+            } else if (event.type === 'error') {
+              reject(new Error(event.message ?? 'Stream error'));
+            }
+          } catch { /* skip malformed */ }
+        }
+      }
+    };
+    pump().catch(reject);
+  });
+}
+
 export const api = {
+  // ── File upload (non-streaming) ───────────────────────────────────────────
   uploadFile: async (file: File, title?: string): Promise<{ id: string; interview: Interview }> => {
     const form = new FormData();
     form.append('file', file);
@@ -24,6 +71,7 @@ export const api = {
     return res.json() as Promise<{ id: string; interview: Interview }>;
   },
 
+  // ── Non-streaming analyze (kept for file upload path) ─────────────────────
   analyzeText: (transcript: string, title?: string) =>
     request<{ id: string; interview: Interview }>('/analyze/text', {
       method: 'POST',
@@ -31,12 +79,38 @@ export const api = {
       body: JSON.stringify({ transcript, title })
     }),
 
+  // ── Streaming analyze — shows AI typing in real-time ──────────────────────
+  analyzeTextStream: async (
+    transcript: string,
+    title: string | undefined,
+    onChunk: (accumulated: string) => void
+  ): Promise<{ id: string; aiResult: AIResult }> => {
+    const res = await fetch(`${BASE}/analyze/text/stream`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ transcript, title })
+    });
+    if (!res.ok) throw new Error('Stream request failed');
+    return readStream(res, onChunk);
+  },
+
+  // ── Streaming regenerate ──────────────────────────────────────────────────
+  regenerateStream: async (
+    id: string,
+    onChunk: (accumulated: string) => void
+  ): Promise<{ id: string; aiResult: AIResult }> => {
+    const res = await fetch(`${BASE}/analyze/regenerate/${id}/stream`, { method: 'POST' });
+    if (!res.ok) throw new Error('Regenerate stream failed');
+    return readStream(res, onChunk);
+  },
+
+  // ── Non-streaming regenerate (fallback) ───────────────────────────────────
   regenerate: (id: string) =>
     request<{ aiResult: AIResult }>(`/analyze/regenerate/${id}`, { method: 'POST' }),
 
+  // ── Interviews CRUD ───────────────────────────────────────────────────────
   getInterviews: () => request<Interview[]>('/interviews'),
   getInterview: (id: string) => request<Interview>(`/interviews/${id}`),
-
   updateInterview: (id: string, data: Partial<Interview>) =>
     request<Interview>(`/interviews/${id}`, {
       method: 'PATCH',
@@ -44,8 +118,16 @@ export const api = {
       body: JSON.stringify(data)
     }),
 
-  getReport: (id: string) => request<Report>(`/report/${id}`),
+  // ── Cross-interview synthesis ─────────────────────────────────────────────
+  synthesize: (interviewIds: string[]) =>
+    request<SynthesisResult>('/analyze/synthesize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ interviewIds })
+    }),
 
+  // ── Report ────────────────────────────────────────────────────────────────
+  getReport: (id: string) => request<Report>(`/report/${id}`),
   getReportMarkdown: async (id: string): Promise<string> => {
     const res = await fetch(`${BASE}/report/${id}/markdown`);
     if (!res.ok) throw new Error('Failed to download report');

@@ -22,6 +22,7 @@ export default function Workspace() {
   const [tab, setTab] = useState<Tab>('summary');
   const [saving, setSaving] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
+  const [streamText, setStreamText] = useState('');
 
   const [editSummary, setEditSummary] = useState('');
   const [editQuotes, setEditQuotes] = useState<string[]>([]);
@@ -77,10 +78,21 @@ export default function Workspace() {
   const handleRegenerate = async () => {
     if (!interview) return;
     setRegenerating(true);
+    setStreamText('');
+    setTab('summary');
     try {
-      const { aiResult } = await api.regenerate(interview.id);
+      const { aiResult } = await api.regenerateStream(
+        interview.id,
+        (accumulated) => {
+          setStreamText(accumulated);
+          // Live-update summary as it streams
+          const match = accumulated.match(/"summary"\s*:\s*"([^"]+)/);
+          if (match) setEditSummary(match[1]);
+        }
+      );
       hydrate(aiResult);
       setInterview(prev => prev ? { ...prev, aiResult } : null);
+      setStreamText('');
     } finally {
       setRegenerating(false);
     }
@@ -164,6 +176,14 @@ export default function Workspace() {
             </button>
           </div>
         </div>
+
+        {/* Streaming panel — shown while regenerating */}
+        {regenerating && streamText && (
+          <div className="stream-preview" style={{ marginBottom: 16 }}>
+            <div className="stream-label">AI generating…</div>
+            <pre className="stream-text">{streamText}<span className="stream-cursor" /></pre>
+          </div>
+        )}
 
         {!interview.aiResult ? (
           <div className="empty-state">
