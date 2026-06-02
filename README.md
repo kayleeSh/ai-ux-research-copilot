@@ -200,3 +200,54 @@ Built by **kaylee lujie**
 ## 📄 License
 
 This project is for educational and portfolio purposes.
+
+## 🧠 AI Workflow Architecture
+                ┌────────────────────────┐
+                │      Frontend (React)  │
+                │  - Upload UX files     │
+                │  - View insights       │
+                │  - Generate reports    │
+                └──────────┬─────────────┘
+                           │
+                           │ REST API (Axios)
+                           ▼
+        ┌────────────────────────────────────┐
+        │        Backend (Node.js)          │
+        │  Express API Layer                │
+        │  - /upload                       │
+        │  - /analyze                      │
+        │  - /report                       │
+        └──────────┬────────────────────────┘
+                   │
+                   │ File Processing Pipeline
+                   ▼
+     ┌──────────────────────────────────────┐
+     │     Document Processing Layer        │
+     │  - PDF Parser (pdf-parse)           │
+     │  - DOCX Parser (mammoth)            │
+     │  - Text Extraction                  │
+     └──────────┬──────────────────────────┘
+                │
+                ▼
+     ┌──────────────────────────────────────┐
+     │        AI Analysis Layer             │
+     │  - OpenAI GPT (or Mock Mode)        │
+     │  - Thematic Analysis                │
+     │  - Pain Point Extraction            │
+     │  - Insight Generation               │
+     └──────────┬──────────────────────────┘
+                │
+                ▼
+     ┌──────────────────────────────────────┐
+     │     Insight Structuring Layer       │
+     │  - UX Themes                        │
+     │  - Opportunity Mapping              │
+     │  - Summary Generation               │
+     └──────────┬──────────────────────────┘
+                │
+                ▼
+        ┌────────────────────────┐
+        │   Structured Output     │
+        │  - Insights JSON        │
+        │  - UX Report            │
+        └────────────────────────┘
