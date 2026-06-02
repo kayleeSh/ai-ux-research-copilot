@@ -62,7 +62,10 @@ analyzeRouter.post(
       res.json({ id, interview: { ...interview, aiResult } });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Unknown error';
-      res.status(500).json({ error: message });
+      const cause = (err as any)?.cause;
+      console.error('[analyze error] message:', message);
+      console.error('[analyze error] cause:', cause);
+      res.status(500).json({ error: message, cause: String(cause) });
     }
   }
 );

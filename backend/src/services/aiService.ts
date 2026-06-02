@@ -1,5 +1,9 @@
+// [UPDATED] Switched AI provider from Google Gemini to Groq (llama-3.1-8b-instant).
+// Groq is free with no billing required — get a key at https://console.groq.com
+// Falls back to mockAnalyze() when GROQ_API_KEY is not set.
 import { AIResult, Cluster } from '../types';
 import { v4 as uuidv4 } from 'uuid';
+// [UPDATED] Removed openai SDK — using native fetch directly for simpler Groq integration
 
 interface AnalyzeResult {
   summary: string;
@@ -9,11 +13,7 @@ interface AnalyzeResult {
   clusters: Cluster[];
 }
 
-async function analyzeWithOpenAI(transcript: string): Promise<AnalyzeResult> {
-  const { default: OpenAI } = await import('openai');
-  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-  const prompt = `You are a senior UX research analyst. Analyze the following interview transcript and return ONLY a valid JSON object with this exact structure — no markdown, no explanation:
+const PROMPT = (transcript: string) => `You are a senior UX research analyst. Analyze the following interview transcript and return ONLY a valid JSON object with this exact structure — no markdown, no explanation:
 
 {
   "summary": "2-3 sentence synthesis of key findings",
@@ -38,24 +38,15 @@ Rules:
 Transcript:
 ${transcript}`;
 
-  const response = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
-    messages: [{ role: 'user', content: prompt }],
-    temperature: 0.3,
-    response_format: { type: 'json_object' }
-  });
+interface RawParsed {
+  summary?: string;
+  keyQuotes?: string[];
+  painPoints?: string[];
+  mainThemes?: string[];
+  clusters?: Array<{ name: string; description: string; themes: string[] }>;
+}
 
-  const content = response.choices[0].message.content;
-  if (!content) throw new Error('No response from OpenAI');
-
-  const parsed = JSON.parse(content) as {
-    summary?: string;
-    keyQuotes?: string[];
-    painPoints?: string[];
-    mainThemes?: string[];
-    clusters?: Array<{ name: string; description: string; themes: string[] }>;
-  };
-
+function buildResult(parsed: RawParsed): AnalyzeResult {
   return {
     summary: parsed.summary ?? '',
     keyQuotes: parsed.keyQuotes ?? [],
@@ -69,6 +60,48 @@ ${transcript}`;
       insightIds: []
     }))
   };
+}
+
+// [UPDATED] Uses native fetch instead of openai SDK — simpler, fewer moving parts
+async function analyzeWithGroq(transcript: string): Promise<AnalyzeResult> {
+  console.log('[groq] starting request, key present:', !!process.env.GROQ_API_KEY);
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 60000); // 60s timeout
+
+  let httpRes: Response;
+  try {
+    httpRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: 'llama-3.1-8b-instant',
+        messages: [{ role: 'user', content: PROMPT(transcript) }],
+        temperature: 0.3,
+        response_format: { type: 'json_object' }
+      }),
+      signal: controller.signal
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
+
+  console.log('[groq] HTTP status:', httpRes.status);
+
+  if (!httpRes.ok) {
+    const errText = await httpRes.text();
+    throw new Error(`Groq ${httpRes.status}: ${errText}`);
+  }
+
+  const data = await httpRes.json() as { choices: Array<{ message: { content: string } }> };
+  const content = data.choices[0]?.message?.content;
+  if (!content) throw new Error('No content in Groq response');
+
+  console.log('[groq] response received, parsing JSON...');
+  return buildResult(JSON.parse(content) as RawParsed);
 }
 
 function mockAnalyze(transcript: string): AnalyzeResult {
@@ -134,8 +167,8 @@ export async function analyzeTranscript(
 ): Promise<AIResult> {
   let result: AnalyzeResult;
 
-  if (process.env.OPENAI_API_KEY) {
-    result = await analyzeWithOpenAI(transcript);
+  if (process.env.GROQ_API_KEY) {              // [UPDATED] was: process.env.GEMINI_API_KEY
+    result = await analyzeWithGroq(transcript); // [UPDATED] was: analyzeWithGemini(transcript)
   } else {
     await new Promise(resolve => setTimeout(resolve, 1400));
     result = mockAnalyze(transcript);

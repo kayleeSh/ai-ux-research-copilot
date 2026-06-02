@@ -8,7 +8,8 @@ export default defineConfig({
     proxy: {
       '/api': {
         target: 'http://localhost:3001',
-        changeOrigin: true
+        changeOrigin: true,
+        timeout: 120000  // 2 minutes — allows time for AI to process long transcripts
       }
     }
   }

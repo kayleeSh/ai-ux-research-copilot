@@ -1,0 +1,12 @@
+# Dependencies
+node_modules/
+
+# Environment files — contains real API keys, never commit
+.env
+
+# Build output
+dist/
+
+# Logs
+*.log
+npm-debug.log*
