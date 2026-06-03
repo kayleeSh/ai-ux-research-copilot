@@ -1,7 +1,50 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import { Interview, AIResult, Cluster } from '../types';
+
+const REGEN_STEPS = [
+  { label: 'Re-reading transcript',    icon: '📄' },
+  { label: 'Extracting new insights',  icon: '🔍' },
+  { label: 'Rebuilding analysis',      icon: '🧠' },
+  { label: 'Finalizing results',       icon: '✨' },
+];
+
+function RegenerateLoader() {
+  const [step, setStep] = useState(0);
+  const [dots, setDots] = useState('');
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    timerRef.current = setInterval(() => setStep(s => Math.min(s + 1, REGEN_STEPS.length - 1)), 1800);
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, []);
+
+  useEffect(() => {
+    const id = setInterval(() => setDots(d => d.length >= 3 ? '' : d + '.'), 400);
+    return () => clearInterval(id);
+  }, []);
+
+  return (
+    <div className="regen-loader">
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+        <span style={{ fontSize: '1.4rem', animation: 'float 2s ease-in-out infinite' }}>🤖</span>
+        <span style={{ fontWeight: 600, fontSize: '0.875rem' }}>Regenerating analysis{dots}</span>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {REGEN_STEPS.map((s, i) => (
+          <div key={i} className={`analyzing-step ${i < step ? 'done' : i === step ? 'active' : 'pending'}`}
+            style={{ padding: '6px 10px' }}>
+            <div className="analyzing-step-icon" style={{ width: 22, height: 22, fontSize: '0.8rem' }}>
+              {i < step ? '✓' : i === step ? <span className="step-spinner" style={{ width: 13, height: 13 }} /> : s.icon}
+            </div>
+            <span style={{ fontSize: '0.8rem' }}>{s.label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 type Tab = 'summary' | 'quotes' | 'pain_points' | 'themes' | 'clusters';
 
@@ -78,18 +121,10 @@ export default function Workspace() {
   const handleRegenerate = async () => {
     if (!interview) return;
     setRegenerating(true);
-    setStreamText('');
+    setStreamText('regenerating');
     setTab('summary');
     try {
-      const { aiResult } = await api.regenerateStream(
-        interview.id,
-        (accumulated) => {
-          setStreamText(accumulated);
-          // Live-update summary as it streams
-          const match = accumulated.match(/"summary"\s*:\s*"([^"]+)/);
-          if (match) setEditSummary(match[1]);
-        }
-      );
+      const { aiResult } = await api.regenerate(interview.id);
       hydrate(aiResult);
       setInterview(prev => prev ? { ...prev, aiResult } : null);
       setStreamText('');
@@ -177,12 +212,9 @@ export default function Workspace() {
           </div>
         </div>
 
-        {/* Streaming panel — shown while regenerating */}
-        {regenerating && streamText && (
-          <div className="stream-preview" style={{ marginBottom: 16 }}>
-            <div className="stream-label">AI generating…</div>
-            <pre className="stream-text">{streamText}<span className="stream-cursor" /></pre>
-          </div>
+        {/* Animated loader shown while regenerating */}
+        {regenerating && (
+          <RegenerateLoader />
         )}
 
         {!interview.aiResult ? (

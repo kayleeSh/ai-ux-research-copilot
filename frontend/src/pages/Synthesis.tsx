@@ -1,7 +1,98 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client';
 import { Interview, SynthesisResult } from '../types';
+
+const STEPS = [
+  { id: 1, label: 'Reading transcripts',        icon: '📄', duration: 1200 },
+  { id: 2, label: 'Finding common patterns',    icon: '🔍', duration: 2000 },
+  { id: 3, label: 'Analyzing differences',      icon: '⚖️',  duration: 1800 },
+  { id: 4, label: 'Generating recommendations', icon: '💡', duration: 1500 },
+];
+
+function SynthesisLoader({ count }: { count: number }) {
+  const [step, setStep] = useState(0);
+  const [dots, setDots] = useState('');
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    let current = 0;
+    const advance = () => {
+      if (current < STEPS.length - 1) {
+        current++;
+        setStep(current);
+        timerRef.current = setTimeout(advance, STEPS[current].duration);
+      }
+    };
+    timerRef.current = setTimeout(advance, STEPS[0].duration);
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, []);
+
+  useEffect(() => {
+    const id = setInterval(() => setDots(d => d.length >= 3 ? '' : d + '.'), 400);
+    return () => clearInterval(id);
+  }, []);
+
+  return (
+    <div className="synthesis-loader">
+      <div className="synthesis-loader-header">
+        <div className="synthesis-ai-icon">🧠</div>
+        <div>
+          <div style={{ fontWeight: 700, fontSize: '1rem' }}>
+            AI is synthesizing {count} interviews
+          </div>
+          <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: 2 }}>
+            Finding patterns across participants{dots}
+          </div>
+        </div>
+      </div>
+
+      <div className="synthesis-steps">
+        {STEPS.map((s, i) => {
+          const isDone    = i < step;
+          const isActive  = i === step;
+          const isPending = i > step;
+          return (
+            <div key={s.id} className={`synthesis-step ${isDone ? 'done' : isActive ? 'active' : 'pending'}`}>
+              <div className="synthesis-step-icon">
+                {isDone ? '✓' : isActive ? <span className="step-spinner" /> : s.icon}
+              </div>
+              <div className="synthesis-step-label">
+                {s.label}
+                {isActive && <span className="step-dots">{dots}</span>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="synthesis-progress-track">
+        <div
+          className="synthesis-progress-bar"
+          style={{ width: `${((step + 1) / STEPS.length) * 100}%` }}
+        />
+      </div>
+      <div style={{ fontSize: '0.75rem', color: '#9ca3af', textAlign: 'right', marginTop: 4 }}>
+        Step {step + 1} of {STEPS.length}
+      </div>
+    </div>
+  );
+}
+
+function ResultSection({ title, children, delay = 0 }: { title: string; children: React.ReactNode; delay?: number }) {
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setVisible(true), delay);
+    return () => clearTimeout(t);
+  }, [delay]);
+
+  return (
+    <div className={`synthesis-section fade-in-up ${visible ? 'visible' : ''}`}>
+      <div className="synthesis-section-title">{title}</div>
+      {children}
+    </div>
+  );
+}
 
 export default function Synthesis() {
   const [interviews, setInterviews] = useState<Interview[]>([]);
@@ -13,10 +104,7 @@ export default function Synthesis() {
 
   useEffect(() => {
     api.getInterviews()
-      .then(data => {
-        // Only show interviews that have been analyzed
-        setInterviews(data.filter(iv => !!iv.aiResult));
-      })
+      .then(data => setInterviews(data.filter(iv => !!iv.aiResult)))
       .finally(() => setLoading(false));
   }, []);
 
@@ -110,15 +198,19 @@ export default function Synthesis() {
             onClick={handleSynthesize}
             disabled={selected.size < 2 || running}
           >
-            {running ? (
-              <><span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} /> Synthesizing…</>
-            ) : (
-              `Synthesize ${selected.size > 0 ? `${selected.size} interviews` : ''} →`
-            )}
+            {running
+              ? <><span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} /> Synthesizing…</>
+              : `✨ Synthesize ${selected.size > 0 ? `${selected.size} interviews` : ''} →`
+            }
           </button>
           {selected.size < 2 && (
             <span style={{ fontSize: '0.8rem', color: '#9ca3af' }}>
               Select at least 2 interviews
+            </span>
+          )}
+          {selected.size >= 2 && !running && (
+            <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>
+              {selected.size} selected · AI will cross-analyze all transcripts
             </span>
           )}
         </div>
@@ -126,37 +218,36 @@ export default function Synthesis() {
 
       {error && <div className="error-msg">{error}</div>}
 
-      {/* Results */}
-      {result && (
+      {/* Animated loader */}
+      {running && <SynthesisLoader count={selected.size} />}
+
+      {/* Results with staggered fade-in */}
+      {result && !running && (
         <div className="synthesis-result">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
             <div>
-              <h2 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Synthesis Results</h2>
+              <h2 style={{ fontSize: '1.1rem', fontWeight: 700 }}>
+                ✅ Synthesis Complete
+              </h2>
               <div style={{ fontSize: '0.8rem', color: '#9ca3af', marginTop: 2 }}>
-                Based on {result.interviewCount} interviews · {new Date(result.createdAt).toLocaleString()}
+                {result.interviewCount} interviews · {new Date(result.createdAt).toLocaleString()}
               </div>
             </div>
           </div>
 
-          {/* Overall Summary */}
-          <div className="synthesis-section">
-            <div className="synthesis-section-title">Overall Summary</div>
+          <ResultSection title="Overall Summary" delay={0}>
             <p style={{ lineHeight: 1.8, color: '#374151' }}>{result.overallSummary}</p>
-          </div>
+          </ResultSection>
 
-          {/* Common Themes */}
-          <div className="synthesis-section">
-            <div className="synthesis-section-title">Common Themes Across Interviews</div>
+          <ResultSection title="Common Themes Across Interviews" delay={100}>
             <div className="theme-tags">
               {result.commonThemes.map((t, i) => (
                 <span key={i} className="tag tag-purple" style={{ fontSize: '0.8rem', padding: '4px 12px' }}>{t}</span>
               ))}
             </div>
-          </div>
+          </ResultSection>
 
-          {/* Patterns */}
-          <div className="synthesis-section">
-            <div className="synthesis-section-title">Behavioral Patterns</div>
+          <ResultSection title="Behavioral Patterns" delay={200}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {result.patterns.map((p, i) => (
                 <div key={i} className="pattern-card">
@@ -170,20 +261,16 @@ export default function Synthesis() {
                   {p.quotes.length > 0 && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                       {p.quotes.slice(0, 2).map((q, qi) => (
-                        <div key={qi} className="report-quote" style={{ fontSize: '0.8rem', padding: '6px 12px' }}>
-                          {q}
-                        </div>
+                        <div key={qi} className="report-quote" style={{ fontSize: '0.8rem', padding: '6px 12px' }}>{q}</div>
                       ))}
                     </div>
                   )}
                 </div>
               ))}
             </div>
-          </div>
+          </ResultSection>
 
-          {/* Prioritized Pain Points */}
-          <div className="synthesis-section">
-            <div className="synthesis-section-title">Prioritized Pain Points</div>
+          <ResultSection title="Prioritized Pain Points" delay={300}>
             <ul className="pain-list">
               {result.prioritizedPainPoints.map((p, i) => (
                 <li key={i}>
@@ -192,24 +279,19 @@ export default function Synthesis() {
                 </li>
               ))}
             </ul>
-          </div>
+          </ResultSection>
 
-          {/* Differences */}
-          <div className="synthesis-section">
-            <div className="synthesis-section-title">Key Differences Between Participants</div>
+          <ResultSection title="Key Differences Between Participants" delay={400}>
             <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
               {result.differences.map((d, i) => (
                 <li key={i} style={{ display: 'flex', gap: 8, fontSize: '0.875rem', color: '#374151', alignItems: 'flex-start' }}>
-                  <span style={{ color: '#d97706', flexShrink: 0 }}>↔</span>
-                  {d}
+                  <span style={{ color: '#d97706', flexShrink: 0 }}>↔</span>{d}
                 </li>
               ))}
             </ul>
-          </div>
+          </ResultSection>
 
-          {/* Recommendations */}
-          <div className="synthesis-section">
-            <div className="synthesis-section-title">Design Recommendations</div>
+          <ResultSection title="Design Recommendations" delay={500}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {result.recommendations.map((r, i) => (
                 <div key={i} className="recommendation-card">
@@ -218,7 +300,7 @@ export default function Synthesis() {
                 </div>
               ))}
             </div>
-          </div>
+          </ResultSection>
         </div>
       )}
     </div>

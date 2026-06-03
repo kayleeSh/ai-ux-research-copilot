@@ -1,6 +1,74 @@
-import { useState, useRef, DragEvent, ChangeEvent } from 'react';
+import { useState, useRef, DragEvent, ChangeEvent, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../api/client';
+
+const UPLOAD_STEPS = [
+  { label: 'Reading transcript',       icon: '📄', duration: 800  },
+  { label: 'Extracting key quotes',    icon: '💬', duration: 1200 },
+  { label: 'Identifying pain points',  icon: '⚡', duration: 1000 },
+  { label: 'Building affinity map',    icon: '🗂️', duration: 900  },
+  { label: 'Generating summary',       icon: '✍️', duration: 800  },
+];
+
+function AnalyzingLoader() {
+  const [step, setStep] = useState(0);
+  const [dots, setDots] = useState('');
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    let current = 0;
+    const advance = () => {
+      if (current < UPLOAD_STEPS.length - 1) {
+        current++;
+        setStep(current);
+        timerRef.current = setTimeout(advance, UPLOAD_STEPS[current].duration);
+      }
+    };
+    timerRef.current = setTimeout(advance, UPLOAD_STEPS[0].duration);
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, []);
+
+  useEffect(() => {
+    const id = setInterval(() => setDots(d => d.length >= 3 ? '' : d + '.'), 400);
+    return () => clearInterval(id);
+  }, []);
+
+  return (
+    <div className="upload-page">
+      <div className="analyzing-loader">
+        <div className="analyzing-header">
+          <div className="analyzing-icon">🤖</div>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: '1.05rem' }}>AI is analyzing your transcript{dots}</div>
+            <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: 2 }}>This usually takes 5–15 seconds</div>
+          </div>
+        </div>
+
+        <div className="analyzing-steps">
+          {UPLOAD_STEPS.map((s, i) => {
+            const isDone   = i < step;
+            const isActive = i === step;
+            return (
+              <div key={i} className={`analyzing-step ${isDone ? 'done' : isActive ? 'active' : 'pending'}`}>
+                <div className="analyzing-step-icon">
+                  {isDone ? '✓' : isActive ? <span className="step-spinner" /> : s.icon}
+                </div>
+                <span>{s.label}{isActive && <span className="step-dots">{dots}</span>}</span>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="synthesis-progress-track" style={{ marginTop: 20 }}>
+          <div
+            className="synthesis-progress-bar"
+            style={{ width: `${((step + 1) / UPLOAD_STEPS.length) * 100}%` }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function Upload() {
   const navigate = useNavigate();
@@ -9,7 +77,6 @@ export default function Upload() {
   const [text, setText] = useState('');
   const [dragging, setDragging] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [streamText, setStreamText] = useState('');
   const [error, setError] = useState('');
   const [mode, setMode] = useState<'file' | 'text'>('file');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -31,49 +98,21 @@ export default function Upload() {
     if (!canSubmit) return;
     setError('');
     setLoading(true);
-    setStreamText('');
-
     try {
+      let result: { id: string };
       if (mode === 'file' && file) {
-        // File upload uses non-streaming path (needs multipart form)
-        const result = await api.uploadFile(file, title || undefined);
-        navigate(`/workspace/${result.id}`);
+        result = await api.uploadFile(file, title || undefined);
       } else {
-        // Text uses streaming — show AI typing in real-time
-        const result = await api.analyzeTextStream(
-          text,
-          title || 'Untitled Interview',
-          (accumulated) => setStreamText(accumulated)
-        );
-        navigate(`/workspace/${result.id}`);
+        result = await api.analyzeText(text, title || 'Untitled Interview');
       }
+      navigate(`/workspace/${result.id}`);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Something went wrong');
       setLoading(false);
-      setStreamText('');
     }
   };
 
-  if (loading) {
-    return (
-      <div className="upload-page">
-        <div className="stream-loading">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-            <div className="spinner" />
-            <span style={{ fontWeight: 600 }}>AI is analyzing your transcript…</span>
-          </div>
-          {streamText ? (
-            <div className="stream-preview">
-              <div className="stream-label">Live AI output</div>
-              <pre className="stream-text">{streamText}<span className="stream-cursor" /></pre>
-            </div>
-          ) : (
-            <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>Connecting to AI…</p>
-          )}
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <AnalyzingLoader />;
 
   return (
     <div className="upload-page">
@@ -81,12 +120,8 @@ export default function Upload() {
       <p className="subtitle">Upload a transcript file or paste text to start AI-powered UX analysis</p>
 
       <div className="tabs" style={{ marginBottom: '24px' }}>
-        <button className={`tab-btn ${mode === 'file' ? 'active' : ''}`} onClick={() => setMode('file')}>
-          Upload File
-        </button>
-        <button className={`tab-btn ${mode === 'text' ? 'active' : ''}`} onClick={() => setMode('text')}>
-          Paste Text
-        </button>
+        <button className={`tab-btn ${mode === 'file' ? 'active' : ''}`} onClick={() => setMode('file')}>Upload File</button>
+        <button className={`tab-btn ${mode === 'text' ? 'active' : ''}`} onClick={() => setMode('text')}>Paste Text</button>
       </div>
 
       {error && <div className="error-msg">{error}</div>}
@@ -143,11 +178,9 @@ export default function Upload() {
 
       <div style={{ marginTop: '24px', display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
         <button className="btn btn-primary" onClick={handleSubmit} disabled={!canSubmit}>
-          Analyze with AI →
+          ✨ Analyze with AI →
         </button>
-        <span style={{ fontSize: '0.78rem', color: '#9ca3af' }}>
-          {mode === 'text' ? 'Streams results in real-time' : 'Extracts text then analyzes'}
-        </span>
+        <span style={{ fontSize: '0.78rem', color: '#9ca3af' }}>Extracts summary, quotes, pain points &amp; themes</span>
       </div>
 
       <div className="divider">or explore sample data</div>
