@@ -979,3 +979,45 @@ body {
   margin-bottom: 20px;
   gap: 16px;
 }
+
+/* ── Wired action buttons (table rows) ───────────── */
+.btn-wired {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border: 1.5px solid #d1d5db;
+  border-radius: 6px;
+  background: #fff;
+  color: #6b7280;
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  transition: border-color 0.12s, color 0.12s, background 0.12s;
+  font-family: inherit;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+.btn-wired:hover:not(:disabled) {
+  border-color: #9ca3af;
+  color: #374151;
+  background: #f9fafb;
+}
+
+.btn-wired:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.btn-wired .wired-icon {
+  color: #b0b7c3;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.btn-wired:hover:not(:disabled) .wired-icon {
+  color: #6b7280;
+}
