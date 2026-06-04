@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import { Interview, SynthesisResult } from '../types';
 
@@ -131,6 +131,7 @@ function ResultSection({
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function Synthesis() {
+  const navigate = useNavigate();
   const [interviews, setInterviews]     = useState<Interview[]>([]);
   const [selected, setSelected]         = useState<Set<string>>(new Set());
   const [loading, setLoading]           = useState(true);
@@ -138,6 +139,7 @@ export default function Synthesis() {
   const [result, setResult]             = useState<SynthesisResult | null>(null);
   const [error, setError]               = useState('');
   const [activeSection, setActiveSection] = useState('selector');
+  const [generatingDecisions, setGeneratingDecisions] = useState(false);
   const mainRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -399,6 +401,41 @@ export default function Synthesis() {
                   ))}
                 </div>
               </ResultSection>
+
+              <div className="synthesis-section fade-in-up visible" style={{ marginTop: 4 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: 3 }}>Ready to act on these insights?</div>
+                    <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>
+                      AI will convert these {result.recommendations.length} recommendations into tracked product decisions
+                    </div>
+                  </div>
+                  <button
+                    className="btn btn-primary"
+                    style={{ flexShrink: 0 }}
+                    disabled={generatingDecisions}
+                    onClick={async () => {
+                      if (!result) return;
+                      setGeneratingDecisions(true);
+                      try {
+                        await api.generateDecisionsFromSynthesis({
+                          recommendations:       result.recommendations,
+                          prioritizedPainPoints: result.prioritizedPainPoints,
+                          commonThemes:          result.commonThemes,
+                        });
+                        navigate('/decisions');
+                      } catch {
+                        setGeneratingDecisions(false);
+                      }
+                    }}
+                  >
+                    {generatingDecisions
+                      ? <><span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} /> Generating…</>
+                      : '✨ Generate Decisions →'
+                    }
+                  </button>
+                </div>
+              </div>
             </>
           )}
 

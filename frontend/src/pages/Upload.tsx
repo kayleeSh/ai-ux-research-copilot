@@ -340,7 +340,7 @@ export default function Upload() {
           fontWeight: 700,
           textTransform: 'uppercase',
           letterSpacing: '0.06em',
-          color: '#9ca3af',
+          color: '#4b5563',
           gap: 8,
           alignItems: 'center',
         }}>

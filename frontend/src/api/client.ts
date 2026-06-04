@@ -1,4 +1,4 @@
-import { Interview, AIResult, Report, SynthesisResult } from '../types';
+import { Interview, AIResult, Report, SynthesisResult, Decision } from '../types';
 
 const BASE = '/api';
 
@@ -132,5 +132,44 @@ export const api = {
     const res = await fetch(`${BASE}/report/${id}/markdown`);
     if (!res.ok) throw new Error('Failed to download report');
     return res.text();
-  }
+  },
+
+  // ── Decisions ─────────────────────────────────────────────────────────────
+  getDecisions: () =>
+    request<Decision[]>('/decisions'),
+
+  createDecision: (data: Partial<Decision>) =>
+    request<Decision>('/decisions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    }),
+
+  updateDecision: (id: string, data: Partial<Decision>) =>
+    request<Decision>(`/decisions/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    }),
+
+  deleteDecision: (id: string) =>
+    request<{ success: boolean }>(`/decisions/${id}`, { method: 'DELETE' }),
+
+  generateDecisions: (interviewIds: string[]) =>
+    request<Decision[]>('/decisions/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ interviewIds })
+    }),
+
+  generateDecisionsFromSynthesis: (data: {
+    recommendations: string[];
+    prioritizedPainPoints: string[];
+    commonThemes: string[];
+  }) =>
+    request<Decision[]>('/decisions/generate-from-synthesis', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    })
 };

@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client';
-import { Interview } from '../types';
+import { Interview, Decision } from '../types';
 
 type Status = 'pending' | 'approved' | 'rejected';
 
@@ -34,6 +34,123 @@ function buildInsights(interview: Interview): FlatInsight[] {
   ];
 }
 
+function StatusDots({ approved, rejected, pending }: { approved: number; rejected: number; pending: number }) {
+  return (
+    <div style={{ display: 'flex', gap: 4, marginLeft: 'auto', flexShrink: 0 }}>
+      {approved > 0 && <span style={{ fontSize: '0.62rem', background: '#f0fdf4', color: '#15803d', borderRadius: 100, padding: '1px 5px', fontWeight: 700 }}>{approved}✓</span>}
+      {rejected > 0 && <span style={{ fontSize: '0.62rem', background: '#fef2f2', color: '#dc2626', borderRadius: 100, padding: '1px 5px', fontWeight: 700 }}>{rejected}✗</span>}
+      {pending > 0  && <span style={{ fontSize: '0.62rem', background: '#fffbeb', color: '#b45309', borderRadius: 100, padding: '1px 5px', fontWeight: 700 }}>{pending}</span>}
+    </div>
+  );
+}
+
+// ── Create Decision from Insight Modal ────────────────────────────────────────
+
+function DecisionFromInsightModal({
+  insight,
+  interview,
+  onClose,
+  onCreated,
+}: {
+  insight: FlatInsight;
+  interview: Interview;
+  onClose: () => void;
+  onCreated: () => void;
+}) {
+  const [title, setTitle]       = useState('');
+  const [priority, setPriority] = useState<'high' | 'medium' | 'low'>(insight.type === 'pain_point' ? 'high' : 'medium');
+  const [note, setNote]         = useState(insight.content);
+  const [saving, setSaving]     = useState(false);
+  const [error, setError]       = useState('');
+
+  const handleCreate = async () => {
+    if (!title.trim()) { setError('Title is required'); return; }
+    setSaving(true);
+    try {
+      await api.createDecision({
+        title,
+        priority,
+        note,
+        status: 'open',
+        sourceType: 'ai_generated',
+        sourceInterviewId:    interview.id,
+        sourceInterviewTitle: interview.title,
+        sourceInsightId:      insight.id,
+        evidenceQuotes:       [insight.content],
+      });
+      onCreated();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to create');
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
+      onClick={onClose}
+    >
+      <div
+        style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 500, boxShadow: '0 20px 60px rgba(0,0,0,0.18)', padding: '28px 32px' }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+          <h2 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Create Decision from Insight</h2>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#9ca3af', padding: 4, lineHeight: 1 }}>✕</button>
+        </div>
+        <p style={{ fontSize: '0.8rem', color: '#6b7280', marginBottom: 18 }}>
+          From: <span style={{ color: '#4f46e5', fontWeight: 500 }}>{interview.title}</span>
+        </p>
+
+        {/* Source insight preview */}
+        <div style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8, padding: '10px 14px', marginBottom: 16 }}>
+          <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#9ca3af', marginBottom: 4 }}>
+            {TYPE_LABEL[insight.type]}
+          </div>
+          <p style={{ fontSize: '0.85rem', color: '#374151', lineHeight: 1.5, margin: 0 }}>{insight.content}</p>
+        </div>
+
+        {error && <div className="error-msg">{error}</div>}
+
+        <div className="form-group">
+          <label>Decision Title *</label>
+          <input
+            type="text"
+            placeholder="e.g. Address onboarding friction to reduce drop-off"
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            autoFocus
+          />
+        </div>
+
+        <div className="form-group">
+          <label>Priority</label>
+          <select value={priority} onChange={e => setPriority(e.target.value as 'high' | 'medium' | 'low')}
+            style={{ width: '100%', padding: '9px 13px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: '0.875rem', fontFamily: 'inherit', background: '#fff', color: '#111827' }}>
+            <option value="high">High — Core workflow impact</option>
+            <option value="medium">Medium — UX improvement</option>
+            <option value="low">Low — Nice to have</option>
+          </select>
+        </div>
+
+        <div className="form-group">
+          <label>Decision Note</label>
+          <textarea value={note} onChange={e => setNote(e.target.value)} style={{ minHeight: '80px' }} />
+        </div>
+
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button className="btn btn-primary" onClick={handleCreate} disabled={saving || !title.trim()}>
+            {saving ? 'Creating…' : '+ Create Decision'}
+          </button>
+          <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Main Component ─────────────────────────────────────────────────────────────
+
 interface DashboardStats {
   interviews: number;
   totalInsights: number;
@@ -47,16 +164,15 @@ interface DashboardStats {
 
 function InsightsStatsBar({ stats }: { stats: DashboardStats }) {
   const cards = [
-    { label: 'Interviews',   value: stats.interviews,   icon: '👥', color: '#4f46e5' },
+    { label: 'Interviews',    value: stats.interviews,   icon: '👥', color: '#4f46e5' },
     { label: 'Total Insights', value: stats.totalInsights, icon: '💡', color: '#0369a1' },
-    { label: 'Pain Points',  value: stats.painPoints,   icon: '⚡', color: '#dc2626' },
-    { label: 'Themes',       value: stats.themes,       icon: '🏷️', color: '#7c3aed' },
-    { label: 'Key Quotes',   value: stats.quotes,       icon: '💬', color: '#0891b2' },
-    { label: 'Approved',     value: stats.approved,     icon: '✓',  color: '#059669' },
-    { label: 'Pending',      value: stats.pending,      icon: '⏳', color: '#d97706' },
-    { label: 'Rejected',     value: stats.rejected,     icon: '✗',  color: '#dc2626' },
+    { label: 'Pain Points',   value: stats.painPoints,   icon: '⚡', color: '#dc2626' },
+    { label: 'Themes',        value: stats.themes,       icon: '🏷️', color: '#7c3aed' },
+    { label: 'Key Quotes',    value: stats.quotes,       icon: '💬', color: '#0891b2' },
+    { label: 'Approved',      value: stats.approved,     icon: '✓',  color: '#059669' },
+    { label: 'Pending',       value: stats.pending,      icon: '⏳', color: '#d97706' },
+    { label: 'Rejected',      value: stats.rejected,     icon: '✗',  color: '#dc2626' },
   ];
-
   return (
     <div className="synthesis-stats-bar">
       {cards.map((c, i) => (
@@ -70,50 +186,29 @@ function InsightsStatsBar({ stats }: { stats: DashboardStats }) {
   );
 }
 
-function StatusDots({ approved, rejected, pending }: { approved: number; rejected: number; pending: number }) {
-  return (
-    <div style={{ display: 'flex', gap: 4, marginLeft: 'auto', flexShrink: 0 }}>
-      {approved > 0 && (
-        <span style={{ fontSize: '0.62rem', background: '#f0fdf4', color: '#15803d', borderRadius: 100, padding: '1px 5px', fontWeight: 700 }}>
-          {approved}✓
-        </span>
-      )}
-      {rejected > 0 && (
-        <span style={{ fontSize: '0.62rem', background: '#fef2f2', color: '#dc2626', borderRadius: 100, padding: '1px 5px', fontWeight: 700 }}>
-          {rejected}✗
-        </span>
-      )}
-      {pending > 0 && (
-        <span style={{ fontSize: '0.62rem', background: '#fffbeb', color: '#b45309', borderRadius: 100, padding: '1px 5px', fontWeight: 700 }}>
-          {pending}
-        </span>
-      )}
-    </div>
-  );
-}
-
 export default function Insights() {
-  const [interviews, setInterviews] = useState<Interview[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [statuses, setStatuses] = useState<Record<string, Status>>({});
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [interviews, setInterviews]   = useState<Interview[]>([]);
+  const [decisions, setDecisions]     = useState<Decision[]>([]);
+  const [loading, setLoading]         = useState(true);
+  const [statuses, setStatuses]       = useState<Record<string, Status>>({});
+  const [editingId, setEditingId]     = useState<string | null>(null);
   const [editContent, setEditContent] = useState('');
-  const [overrides, setOverrides] = useState<Record<string, string>>({});
-  const [activeId, setActiveId] = useState<string>('all');
+  const [overrides, setOverrides]     = useState<Record<string, string>>({});
+  const [activeId, setActiveId]       = useState<string>('all');
+  const [pendingDecisionInsight, setPendingDecisionInsight] = useState<FlatInsight | null>(null);
+  const [decisionCreatedFor, setDecisionCreatedFor] = useState<Set<string>>(new Set());
   const mainRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    api.getInterviews()
-      .then(data => setInterviews(data))
+    Promise.all([api.getInterviews(), api.getDecisions()])
+      .then(([iv, d]) => { setInterviews(iv); setDecisions(d); })
       .finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {
     if (interviews.length === 0) return;
     const observer = new IntersectionObserver(
-      entries => {
-        entries.forEach(e => { if (e.isIntersecting) setActiveId(e.target.id); });
-      },
+      entries => { entries.forEach(e => { if (e.isIntersecting) setActiveId(e.target.id); }); },
       { root: mainRef.current, threshold: 0.25 }
     );
     interviews.forEach(iv => {
@@ -146,12 +241,23 @@ export default function Insights() {
     setEditingId(null);
   };
 
+  const handleDecisionCreated = () => {
+    if (pendingDecisionInsight) {
+      setDecisionCreatedFor(prev => new Set([...prev, pendingDecisionInsight.id]));
+    }
+    setPendingDecisionInsight(null);
+    // Refresh decisions count
+    api.getDecisions().then(setDecisions);
+  };
+
+  // Decision count per interview
+  const decisionCountByInterview = decisions.reduce<Record<string, number>>((acc, d) => {
+    if (d.sourceInterviewId) acc[d.sourceInterviewId] = (acc[d.sourceInterviewId] ?? 0) + 1;
+    return acc;
+  }, {});
+
   if (loading) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', padding: 48 }}>
-        <div className="spinner" />
-      </div>
-    );
+    return <div style={{ display: 'flex', justifyContent: 'center', padding: 48 }}><div className="spinner" /></div>;
   }
 
   if (interviews.length === 0) {
@@ -168,8 +274,8 @@ export default function Insights() {
   }
 
   const analyzedInterviews = interviews.filter(iv => !!iv.aiResult && buildInsights(iv).length > 0);
-
   const allInsights = analyzedInterviews.flatMap(iv => buildInsights(iv));
+
   const stats: DashboardStats = {
     interviews:    analyzedInterviews.length,
     totalInsights: allInsights.length,
@@ -184,18 +290,15 @@ export default function Insights() {
   return (
     <div className="synthesis-full-page">
       <InsightsStatsBar stats={stats} />
+
       <div className="synthesis-layout">
 
-        {/* ── Sidebar ── */}
+        {/* Sidebar */}
         <aside className="synthesis-sidebar">
           <div className="sidebar-group-label">Interviews</div>
 
-          <button
-            className={`sidebar-nav-btn ${activeId === 'all' ? 'active' : ''}`}
-            onClick={() => scrollTo('all')}
-          >
-            <span>📋</span>
-            <span>All Interviews</span>
+          <button className={`sidebar-nav-btn ${activeId === 'all' ? 'active' : ''}`} onClick={() => scrollTo('all')}>
+            <span>📋</span><span>All Interviews</span>
           </button>
 
           <div className="sidebar-divider" />
@@ -205,34 +308,33 @@ export default function Insights() {
             const approvedCount = insights.filter(i => getStatus(i.id) === 'approved').length;
             const rejectedCount = insights.filter(i => getStatus(i.id) === 'rejected').length;
             const pendingCount  = insights.filter(i => getStatus(i.id) === 'pending').length;
+            const dCount        = decisionCountByInterview[iv.id] ?? 0;
 
             return (
-              <button
-                key={iv.id}
+              <button key={iv.id}
                 className={`sidebar-nav-btn ${activeId === iv.id ? 'active' : ''}`}
                 onClick={() => scrollTo(iv.id)}
-                title={iv.title}
-              >
+                title={iv.title}>
                 <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'left' }}>
                   {iv.title}
                 </span>
                 <StatusDots approved={approvedCount} rejected={rejectedCount} pending={pendingCount} />
+                {dCount > 0 && (
+                  <span style={{ fontSize: '0.62rem', background: '#eff6ff', color: '#1d4ed8', borderRadius: 100, padding: '1px 5px', fontWeight: 700, marginLeft: 2 }}>
+                    {dCount}D
+                  </span>
+                )}
               </button>
             );
           })}
 
           <div className="sidebar-divider" />
-
-          <Link
-            to="/upload"
-            className="sidebar-nav-btn"
-            style={{ textDecoration: 'none', color: '#6b7280' }}
-          >
+          <Link to="/upload" className="sidebar-nav-btn" style={{ textDecoration: 'none', color: '#6b7280' }}>
             <span>+</span><span>New Interview</span>
           </Link>
         </aside>
 
-        {/* ── Main content ── */}
+        {/* Main */}
         <main className="synthesis-main" ref={mainRef}>
           <div className="page-header" style={{ marginBottom: 24 }}>
             <h1 style={{ fontSize: '1.4rem', fontWeight: 700 }}>Insights</h1>
@@ -244,6 +346,7 @@ export default function Insights() {
             const approvedCount = insights.filter(i => getStatus(i.id) === 'approved').length;
             const rejectedCount = insights.filter(i => getStatus(i.id) === 'rejected').length;
             const pendingCount  = insights.filter(i => getStatus(i.id) === 'pending').length;
+            const dCount        = decisionCountByInterview[interview.id] ?? 0;
 
             return (
               <div key={interview.id} id={interview.id} className="interview-section" style={{ scrollMarginTop: 20 }}>
@@ -252,43 +355,37 @@ export default function Insights() {
                   <div className="interview-section-actions">
                     {approvedCount > 0 && <span className="tag tag-green">{approvedCount} approved</span>}
                     {rejectedCount > 0 && <span className="tag tag-red">{rejectedCount} rejected</span>}
-                    {pendingCount > 0  && <span className="tag tag-yellow">{pendingCount} pending</span>}
+                    {pendingCount  > 0 && <span className="tag tag-yellow">{pendingCount} pending</span>}
+                    {dCount > 0 && (
+                      <Link to="/decisions" className="tag tag-blue" style={{ textDecoration: 'none', cursor: 'pointer' }}>
+                        {dCount} decision{dCount !== 1 ? 's' : ''}
+                      </Link>
+                    )}
                     <Link to={`/workspace/${interview.id}`} className="btn btn-ghost btn-sm">Workspace</Link>
                     <Link to={`/report/${interview.id}`} className="btn btn-secondary btn-sm">Report →</Link>
                   </div>
                 </div>
 
                 {insights.map(insight => {
-                  const status = getStatus(insight.id);
+                  const status    = getStatus(insight.id);
                   const isEditing = editingId === insight.id;
-                  const content = overrides[insight.id] ?? insight.content;
+                  const content   = overrides[insight.id] ?? insight.content;
+                  const hasDecision = decisionCreatedFor.has(insight.id);
 
                   return (
                     <div key={insight.id} className={`insight-card ${status}`}>
                       <div className="insight-body">
                         <div className="insight-meta">
-                          <span className={`tag ${TYPE_COLOR[insight.type]}`}>
-                            {TYPE_LABEL[insight.type]}
-                          </span>
+                          <span className={`tag ${TYPE_COLOR[insight.type]}`}>{TYPE_LABEL[insight.type]}</span>
                           <span className={`tag status-${status}`}>{status}</span>
+                          {hasDecision && <span className="tag tag-blue">✨ Decision created</span>}
                         </div>
                         {isEditing ? (
                           <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                            <textarea
-                              className="edit-area"
-                              value={editContent}
-                              onChange={e => setEditContent(e.target.value)}
-                              rows={2}
-                              style={{ flex: 1 }}
-                              autoFocus
-                            />
+                            <textarea className="edit-area" value={editContent} onChange={e => setEditContent(e.target.value)} rows={2} style={{ flex: 1 }} autoFocus />
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                              <button className="btn btn-success btn-sm" onClick={() => commitEdit(insight.id)}>
-                                Save
-                              </button>
-                              <button className="btn btn-ghost btn-sm" onClick={() => setEditingId(null)}>
-                                Cancel
-                              </button>
+                              <button className="btn btn-success btn-sm" onClick={() => commitEdit(insight.id)}>Save</button>
+                              <button className="btn btn-ghost btn-sm" onClick={() => setEditingId(null)}>Cancel</button>
                             </div>
                           </div>
                         ) : (
@@ -298,38 +395,20 @@ export default function Insights() {
 
                       {!isEditing && (
                         <div className="insight-actions">
-                          <button
-                            className="btn btn-success btn-sm"
-                            onClick={() => setStatus(insight.id, 'approved')}
-                            disabled={status === 'approved'}
-                            title="Approve"
-                          >
-                            ✓
-                          </button>
-                          <button
-                            className="btn btn-danger btn-sm"
-                            onClick={() => setStatus(insight.id, 'rejected')}
-                            disabled={status === 'rejected'}
-                            title="Reject"
-                          >
-                            ✗
-                          </button>
+                          <button className="btn btn-success btn-sm" onClick={() => setStatus(insight.id, 'approved')} disabled={status === 'approved'} title="Approve">✓</button>
+                          <button className="btn btn-danger btn-sm" onClick={() => setStatus(insight.id, 'rejected')} disabled={status === 'rejected'} title="Reject">✗</button>
+                          <button className="btn btn-ghost btn-sm" onClick={() => startEdit(insight)} title="Edit">✎</button>
+                          {status !== 'pending' && (
+                            <button className="btn btn-ghost btn-sm" onClick={() => setStatus(insight.id, 'pending')} title="Reset">↺</button>
+                          )}
                           <button
                             className="btn btn-ghost btn-sm"
-                            onClick={() => startEdit(insight)}
-                            title="Edit"
+                            onClick={() => setPendingDecisionInsight(insight)}
+                            title="Create Decision from this insight"
+                            style={{ color: '#4f46e5', borderColor: '#c7d2fe' }}
                           >
-                            ✎
+                            + Decision
                           </button>
-                          {status !== 'pending' && (
-                            <button
-                              className="btn btn-ghost btn-sm"
-                              onClick={() => setStatus(insight.id, 'pending')}
-                              title="Reset to pending"
-                            >
-                              ↺
-                            </button>
-                          )}
                         </div>
                       )}
                     </div>
@@ -342,6 +421,15 @@ export default function Insights() {
           <div style={{ height: 80 }} />
         </main>
       </div>
+
+      {pendingDecisionInsight && (
+        <DecisionFromInsightModal
+          insight={pendingDecisionInsight}
+          interview={interviews.find(iv => iv.id === pendingDecisionInsight.interviewId)!}
+          onClose={() => setPendingDecisionInsight(null)}
+          onCreated={handleDecisionCreated}
+        />
+      )}
     </div>
   );
 }

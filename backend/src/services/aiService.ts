@@ -302,6 +302,172 @@ function mockSynthesis(interviews: Array<{ id: string; title: string }>): Synthe
   };
 }
 
+// ── Decision Generation ───────────────────────────────────────────────────────
+
+interface RawDecision {
+  title?: string;
+  priority?: string;
+  note?: string;
+  evidenceQuotes?: string[];
+}
+
+const DECISIONS_PROMPT = (
+  painPoints: string[],
+  quotes: string[],
+  themes: string[]
+) => `You are a senior product manager. Based on these UX research findings, generate actionable product decisions.
+
+Return ONLY a valid JSON array with no markdown, no explanation:
+
+[
+  {
+    "title": "Actionable decision starting with a verb, specific, 8-15 words",
+    "priority": "high",
+    "note": "1-2 sentence rationale linking directly to a research finding",
+    "evidenceQuotes": ["exact quote or pain point from the research"]
+  }
+]
+
+Rules:
+- Generate 3-5 decisions
+- title: verb-first and specific (e.g. "Redesign onboarding to reduce context-switching overhead")
+- priority: "high" (core workflow impact), "medium" (UX improvement), or "low" (enhancement)
+- evidenceQuotes: 1-2 direct quotes or pain points as evidence
+
+Pain Points:
+${painPoints.slice(0, 8).join('\n')}
+
+Key Quotes:
+${quotes.slice(0, 6).join('\n')}
+
+Themes: ${themes.join(', ')}`;
+
+function mockGenerateDecisions(
+  interviews: Array<{ title: string; painPoints: string[]; keyQuotes: string[]; mainThemes: string[] }>
+): RawDecision[] {
+  const allPain   = interviews.flatMap(iv => iv.painPoints);
+  const allQuotes = interviews.flatMap(iv => iv.keyQuotes);
+  return [
+    {
+      title: `Address core workflow friction identified across ${interviews.length} interview${interviews.length > 1 ? 's' : ''}`,
+      priority: 'high',
+      note: 'Research consistently surfaces workflow inefficiency as the top pain point. Immediate design iteration is recommended.',
+      evidenceQuotes: allPain.slice(0, 2).filter(Boolean)
+    },
+    {
+      title: 'Design unified information architecture to eliminate tool fragmentation',
+      priority: 'high',
+      note: 'Multiple participants describe managing disconnected tools as their primary daily frustration.',
+      evidenceQuotes: allQuotes.slice(0, 1).filter(Boolean)
+    },
+    {
+      title: 'Reduce manual coordination overhead through automated status updates',
+      priority: 'medium',
+      note: 'Context switching and manual synchronization are consuming disproportionate time across all participants.',
+      evidenceQuotes: allPain.slice(2, 3).filter(Boolean)
+    }
+  ];
+}
+
+export async function generateDecisions(
+  interviews: Array<{ title: string; painPoints: string[]; keyQuotes: string[]; mainThemes: string[] }>
+): Promise<RawDecision[]> {
+  const allPain   = [...new Set(interviews.flatMap(iv => iv.painPoints))];
+  const allQuotes = [...new Set(interviews.flatMap(iv => iv.keyQuotes))];
+  const allThemes = [...new Set(interviews.flatMap(iv => iv.mainThemes))];
+
+  if (!process.env.GROQ_API_KEY) {
+    await new Promise(r => setTimeout(r, 1200));
+    return mockGenerateDecisions(interviews);
+  }
+
+  console.log('[groq] generating decisions...');
+  const res = await groqFetch({
+    model: 'llama-3.1-8b-instant',
+    messages: [{ role: 'user', content: DECISIONS_PROMPT(allPain, allQuotes, allThemes) }],
+    temperature: 0.3,
+    response_format: { type: 'json_object' }
+  });
+
+  if (!res.ok) throw new Error(`Groq decisions ${res.status}: ${await res.text()}`);
+  const data = await res.json() as { choices: Array<{ message: { content: string } }> };
+  const content = data.choices[0]?.message?.content;
+  if (!content) throw new Error('No content in Groq decisions response');
+
+  const parsed = JSON.parse(content) as RawDecision[] | { decisions?: RawDecision[] };
+  const arr = Array.isArray(parsed) ? parsed : (parsed.decisions ?? []);
+  console.log(`[groq] generated ${arr.length} decisions`);
+  return arr;
+}
+
+// ── Decisions from Synthesis ──────────────────────────────────────────────────
+
+const DECISIONS_FROM_SYNTHESIS_PROMPT = (
+  recommendations: string[],
+  painPoints: string[],
+  themes: string[]
+) => `You are a senior product manager converting synthesis recommendations into trackable product decisions.
+
+Return ONLY a valid JSON array with no markdown:
+
+[
+  {
+    "title": "Actionable decision starting with a verb (8-15 words)",
+    "priority": "high|medium|low",
+    "note": "1-2 sentence rationale based on the recommendation",
+    "evidenceQuotes": ["the recommendation or pain point this is based on"]
+  }
+]
+
+Rules:
+- Generate exactly one decision per recommendation
+- title: verb-first and specific
+- priority: high (core workflow), medium (UX improvement), low (enhancement)
+
+Recommendations to convert:
+${recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
+
+Supporting Pain Points:
+${painPoints.slice(0, 5).join('\n')}
+
+Themes: ${themes.join(', ')}`;
+
+export async function generateDecisionsFromSynthesis(data: {
+  recommendations: string[];
+  prioritizedPainPoints: string[];
+  commonThemes: string[];
+}): Promise<RawDecision[]> {
+  const { recommendations, prioritizedPainPoints, commonThemes } = data;
+
+  if (!process.env.GROQ_API_KEY) {
+    await new Promise(r => setTimeout(r, 1000));
+    return recommendations.slice(0, 5).map((rec, i) => ({
+      title: rec.length > 80 ? rec.slice(0, rec.lastIndexOf(' ', 80)) + '…' : rec,
+      priority: (i === 0 ? 'high' : i <= 2 ? 'medium' : 'low') as 'high' | 'medium' | 'low',
+      note: `Based on cross-interview synthesis: ${rec}`,
+      evidenceQuotes: [rec],
+    }));
+  }
+
+  console.log('[groq] generating decisions from synthesis...');
+  const res = await groqFetch({
+    model: 'llama-3.1-8b-instant',
+    messages: [{ role: 'user', content: DECISIONS_FROM_SYNTHESIS_PROMPT(recommendations, prioritizedPainPoints, commonThemes) }],
+    temperature: 0.3,
+    response_format: { type: 'json_object' }
+  });
+
+  if (!res.ok) throw new Error(`Groq decisions-from-synthesis ${res.status}: ${await res.text()}`);
+  const responseData = await res.json() as { choices: Array<{ message: { content: string } }> };
+  const content = responseData.choices[0]?.message?.content;
+  if (!content) throw new Error('No content in response');
+
+  const parsed = JSON.parse(content) as RawDecision[] | { decisions?: RawDecision[] };
+  const arr = Array.isArray(parsed) ? parsed : (parsed.decisions ?? []);
+  console.log(`[groq] generated ${arr.length} decisions from synthesis`);
+  return arr;
+}
+
 // ── Public API ────────────────────────────────────────────────────────────────
 
 export async function analyzeTranscript(transcript: string, interviewId: string): Promise<AIResult> {

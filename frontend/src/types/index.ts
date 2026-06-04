@@ -67,3 +67,21 @@ export interface Report {
   mainThemes: string[];
   clusters: Cluster[];
 }
+
+export interface Decision {
+  id: string;
+  title: string;
+  status: 'draft' | 'open' | 'in_progress' | 'decided' | 'rejected' | 'deferred' | 'archived';
+  priority: 'high' | 'medium' | 'low';
+  note: string;
+  owner: string;
+  dueDate: string;
+  evidenceQuotes: string[];
+  sourceType: 'manual' | 'ai_generated';
+  sourceInterviewId: string;
+  sourceInterviewTitle: string;
+  sourceInsightId: string;
+  statusHistory: Array<{ status: string; changedAt: string }>;
+  createdAt: string;
+  updatedAt: string;
+}
