@@ -79,6 +79,7 @@ export interface Problem {
   parentId: string;
   sourceInterviewIds?: string[];
   sourceInterviewTitles?: string[];
+  status: 'unresolved' | 'in_progress' | 'addressed';
   createdAt: string;
 }
 

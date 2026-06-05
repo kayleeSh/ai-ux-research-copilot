@@ -1,4 +1,4 @@
-import { Interview, AIResult, Report, SynthesisResult, Decision, ProblemsAnalysis, Briefing } from '../types';
+import { Interview, AIResult, Report, SynthesisResult, Decision, ProblemsAnalysis, Briefing, Problem } from '../types';
 
 const BASE = '/api';
 
@@ -159,6 +159,12 @@ export const api = {
   getProblems: () => request<ProblemsAnalysis>('/problems'),
   generateProblems: () =>
     request<ProblemsAnalysis>('/problems/generate', { method: 'POST' }),
+  updateProblemStatus: (id: string, status: Problem['status']) =>
+    request<Problem>(`/problems/${id}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status })
+    }),
 
   // ── Briefing ──────────────────────────────────────────────────────────────
   getBriefing: () => request<Briefing>('/briefing'),

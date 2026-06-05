@@ -12,6 +12,12 @@ const SEVERITY_CONFIG: Record<Problem['severity'], { label: string; color: strin
   minor:    { label: 'Minor',    color: '#6b7280', bg: '#f3f4f6', border: '#d1d5db' },
 };
 
+const PROBLEM_STATUS_CONFIG: Record<Problem['status'], { label: string; color: string; bg: string; border: string }> = {
+  unresolved: { label: 'Unresolved', color: '#6b7280', bg: '#f3f4f6', border: '#d1d5db' },
+  in_progress: { label: 'In Progress', color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' },
+  addressed:   { label: 'Addressed',   color: '#059669', bg: '#f0fdf4', border: '#bbf7d0' },
+};
+
 const FREQUENCY_LABEL: Record<Problem['frequency'], string> = {
   daily:      'Daily',
   per_sprint: 'Per Sprint',
@@ -38,62 +44,54 @@ type ViewMode = 'hierarchy' | 'segment' | 'priority';
 
 // ── Log Decision Button ────────────────────────────────────────────────────────
 
-function LogProblemButton({ problem }: { problem: Problem }) {
+function LogProblemButton({ problem, onStatusChange }: { problem: Problem; onStatusChange: (id: string, status: Problem['status']) => void }) {
   const [logged, setLogged]   = useState(false);
   const [logging, setLogging] = useState(false);
 
-  const row: React.CSSProperties = {
-    marginTop: 14, paddingTop: 12, borderTop: '1px solid #f3f4f6',
-    display: 'flex', justifyContent: 'flex-end', alignItems: 'center',
-  };
-
   if (logged) return (
-    <div style={row}>
-      <span style={{ fontSize: '0.8rem', color: '#059669', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}>
-        ✓ Added to Decision Log
-      </span>
-    </div>
+    <span style={{ fontSize: '0.8rem', color: '#059669', fontWeight: 600 }}>✓ Added to Decision Log</span>
   );
 
   return (
-    <div style={row}>
-      <button
-        disabled={logging}
-        onClick={async () => {
-          setLogging(true);
-          try {
-            await api.createDecision({
-              title:                problem.title.length > 120 ? problem.title.slice(0, 120) + '…' : problem.title,
-              status:               'under_discussion',
-              priority:             problem.severity === 'critical' ? 'high' : problem.severity === 'moderate' ? 'medium' : 'low',
-              note:                 problem.description,
-              evidenceQuotes:       problem.evidenceQuotes,
-              sourceType:           'ai_generated',
-              sourceInterviewTitle: problem.sourceInterviewTitles?.[0] ?? '',
-              sourceProblemId:      problem.id,
-              sourceProblemTitle:   problem.title,
-            });
-            setLogged(true);
-          } catch { setLogging(false); }
-        }}
-        style={{
-          background: '#eef2ff', color: '#4f46e5', border: '1px solid #c7d2fe',
-          borderRadius: 8, padding: '7px 16px', fontSize: '0.8rem', fontWeight: 600,
-          cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
-          fontFamily: 'inherit', whiteSpace: 'nowrap',
-        }}
-      >
-        {logging ? '…' : '◈ Log as Decision'}
-      </button>
-    </div>
+    <button
+      disabled={logging}
+      onClick={async () => {
+        setLogging(true);
+        try {
+          await api.createDecision({
+            title:                problem.title.length > 120 ? problem.title.slice(0, 120) + '…' : problem.title,
+            status:               'under_discussion',
+            priority:             problem.severity === 'critical' ? 'high' : problem.severity === 'moderate' ? 'medium' : 'low',
+            note:                 problem.description,
+            evidenceQuotes:       problem.evidenceQuotes,
+            sourceType:           'ai_generated',
+            sourceInterviewTitle: problem.sourceInterviewTitles?.[0] ?? '',
+            sourceProblemId:      problem.id,
+            sourceProblemTitle:   problem.title,
+          });
+          await api.updateProblemStatus(problem.id, 'in_progress');
+          onStatusChange(problem.id, 'in_progress');
+          setLogged(true);
+        } catch { setLogging(false); }
+      }}
+      style={{
+        background: '#eef2ff', color: '#4f46e5', border: '1px solid #c7d2fe',
+        borderRadius: 8, padding: '7px 16px', fontSize: '0.8rem', fontWeight: 600,
+        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
+        fontFamily: 'inherit', whiteSpace: 'nowrap',
+      }}
+    >
+      {logging ? '…' : '◈ Log as Decision'}
+    </button>
   );
 }
 
 // ── Problem Card ───────────────────────────────────────────────────────────────
 
-function ProblemCard({ problem, isChild = false }: { problem: Problem; isChild?: boolean }) {
+function ProblemCard({ problem, isChild = false, onStatusChange }: { problem: Problem; isChild?: boolean; onStatusChange: (id: string, status: Problem['status']) => void }) {
   const [showEvidence, setShowEvidence] = useState(false);
-  const cfg = SEVERITY_CONFIG[problem.severity];
+  const cfg  = SEVERITY_CONFIG[problem.severity];
+  const scfg = PROBLEM_STATUS_CONFIG[problem.status ?? 'unresolved'];
 
   return (
     <div
@@ -113,6 +111,11 @@ function ProblemCard({ problem, isChild = false }: { problem: Problem; isChild?:
           <span className="tag tag-gray" style={{ fontSize: '0.72rem' }}>
             {FREQUENCY_LABEL[problem.frequency]}
           </span>
+          {(problem.status ?? 'unresolved') !== 'unresolved' && (
+            <span style={{ background: scfg.bg, color: scfg.color, border: `1px solid ${scfg.border}`, borderRadius: 100, fontSize: '0.72rem', fontWeight: 700, padding: '2px 9px' }}>
+              {scfg.label}
+            </span>
+          )}
           {problem.affectedRoles.map(role => (
             <span key={role} className="tag" style={{ background: `${ROLE_COLOR[role]}15`, color: ROLE_COLOR[role], fontSize: '0.68rem', fontWeight: 600, padding: '2px 8px', borderRadius: 100 }}>
               {ROLE_LABEL[role] ?? role}
@@ -176,14 +179,37 @@ function ProblemCard({ problem, isChild = false }: { problem: Problem; isChild?:
         </div>
       )}
 
-      <LogProblemButton problem={problem} />
+      {/* Card footer: status actions + log button */}
+      <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid #f3f4f6', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+        <div>
+          {(problem.status ?? 'unresolved') === 'in_progress' && (
+            <button
+              onClick={async () => { await api.updateProblemStatus(problem.id, 'addressed'); onStatusChange(problem.id, 'addressed'); }}
+              style={{ background: '#f0fdf4', color: '#059669', border: '1px solid #bbf7d0', borderRadius: 8, padding: '7px 14px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+            >
+              ✓ Mark as Addressed
+            </button>
+          )}
+          {(problem.status ?? 'unresolved') === 'addressed' && (
+            <button
+              onClick={async () => { await api.updateProblemStatus(problem.id, 'unresolved'); onStatusChange(problem.id, 'unresolved'); }}
+              style={{ background: '#f3f4f6', color: '#6b7280', border: '1px solid #d1d5db', borderRadius: 8, padding: '7px 14px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+            >
+              ↺ Reopen
+            </button>
+          )}
+        </div>
+        <LogProblemButton problem={problem} onStatusChange={onStatusChange} />
+      </div>
     </div>
   );
 }
 
 // ── View Renderers ─────────────────────────────────────────────────────────────
 
-function HierarchyView({ problems }: { problems: Problem[] }) {
+type OnStatusChange = (id: string, status: Problem['status']) => void;
+
+function HierarchyView({ problems, onStatusChange }: { problems: Problem[]; onStatusChange: OnStatusChange }) {
   const roots    = problems.filter(p => !p.parentId);
   const children = problems.filter(p => !!p.parentId);
 
@@ -191,10 +217,10 @@ function HierarchyView({ problems }: { problems: Problem[] }) {
     <>
       {roots.map(root => (
         <div key={root.id}>
-          <ProblemCard problem={root} />
+          <ProblemCard problem={root} onStatusChange={onStatusChange} />
           {children
             .filter(c => c.parentId === root.id || c.parentId === root.title)
-            .map(child => <ProblemCard key={child.id} problem={child} isChild />)
+            .map(child => <ProblemCard key={child.id} problem={child} isChild onStatusChange={onStatusChange} />)
           }
         </div>
       ))}
@@ -202,7 +228,7 @@ function HierarchyView({ problems }: { problems: Problem[] }) {
   );
 }
 
-function SegmentView({ problems }: { problems: Problem[] }) {
+function SegmentView({ problems, onStatusChange }: { problems: Problem[]; onStatusChange: OnStatusChange }) {
   const allRoles = [...new Set(problems.flatMap(p => p.affectedRoles))];
   return (
     <>
@@ -210,7 +236,7 @@ function SegmentView({ problems }: { problems: Problem[] }) {
         const roleProblems = problems.filter(p => p.affectedRoles.includes(role));
         if (roleProblems.length === 0) return null;
         return (
-          <div key={role} style={{ marginBottom: 28 }}>
+          <div key={role} id={`role-${role}`} style={{ marginBottom: 28, scrollMarginTop: 20 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
               <span style={{ width: 10, height: 10, borderRadius: '50%', background: ROLE_COLOR[role] ?? '#9ca3af', flexShrink: 0 }} />
               <span style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#4b5563' }}>
@@ -218,7 +244,7 @@ function SegmentView({ problems }: { problems: Problem[] }) {
               </span>
               <span style={{ fontSize: '0.72rem', color: '#9ca3af' }}>({roleProblems.length} problem{roleProblems.length !== 1 ? 's' : ''})</span>
             </div>
-            {roleProblems.map(p => <ProblemCard key={`${role}-${p.id}`} problem={p} />)}
+            {roleProblems.map(p => <ProblemCard key={`${role}-${p.id}`} problem={p} onStatusChange={onStatusChange} />)}
           </div>
         );
       })}
@@ -226,7 +252,7 @@ function SegmentView({ problems }: { problems: Problem[] }) {
   );
 }
 
-function PriorityView({ problems }: { problems: Problem[] }) {
+function PriorityView({ problems, onStatusChange }: { problems: Problem[]; onStatusChange: OnStatusChange }) {
   const severities: Problem['severity'][] = ['critical', 'moderate', 'minor'];
   return (
     <>
@@ -248,7 +274,7 @@ function PriorityView({ problems }: { problems: Problem[] }) {
                   {i + 1}
                 </div>
                 <div style={{ flex: 1 }}>
-                  <ProblemCard problem={p} />
+                  <ProblemCard problem={p} onStatusChange={onStatusChange} />
                 </div>
               </div>
             ))}
@@ -270,6 +296,7 @@ export default function Problems() {
   const [severityFilter, setSeverityFilter] = useState<string>('all');
   const [roleFilter, setRoleFilter]         = useState<string>('all');
   const [confirmRegen, setConfirmRegen]     = useState(false);
+  const [scrollTargetRole, setScrollTargetRole] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -280,6 +307,23 @@ export default function Problems() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    if (!scrollTargetRole || viewMode !== 'segment') return;
+    const timer = setTimeout(() => {
+      const el = document.getElementById(`role-${scrollTargetRole}`);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setScrollTargetRole(null);
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [viewMode, scrollTargetRole]);
+
+  const handleStatusChange = useCallback((id: string, status: Problem['status']) => {
+    setAnalysis(prev => prev ? {
+      ...prev,
+      problems: prev.problems.map(p => p.id === id ? { ...p, status } : p)
+    } : prev);
+  }, []);
 
   const handleGenerate = async () => {
     setGenerating(true); setError('');
@@ -368,14 +412,22 @@ export default function Problems() {
           {allRoles.length > 0 && (
             <>
               <div className="sidebar-divider" />
-              <div className="sidebar-group-label">Role</div>
-              <button className={`sidebar-nav-btn ${roleFilter === 'all' ? 'active' : ''}`} onClick={() => setRoleFilter('all')}>
+              <div className="sidebar-group-label">Jump to Role</div>
+              <button
+                className={`sidebar-nav-btn ${viewMode === 'segment' && !scrollTargetRole ? 'active' : ''}`}
+                onClick={() => { setViewMode('segment'); setRoleFilter('all'); setScrollTargetRole(null); }}
+              >
                 <span>👥</span><span>All Roles</span>
               </button>
               {allRoles.map(role => (
-                <button key={role} className={`sidebar-nav-btn ${roleFilter === role ? 'active' : ''}`} onClick={() => setRoleFilter(role)}>
+                <button
+                  key={role}
+                  className="sidebar-nav-btn"
+                  onClick={() => { setViewMode('segment'); setRoleFilter('all'); setScrollTargetRole(role); }}
+                >
                   <span style={{ width: 8, height: 8, borderRadius: '50%', background: ROLE_COLOR[role] ?? '#9ca3af', flexShrink: 0, display: 'inline-block' }} />
                   <span style={{ flex: 1, textAlign: 'left' }}>{ROLE_LABEL[role] ?? role}</span>
+                  <span style={{ fontSize: '0.65rem', color: '#9ca3af' }}>↓</span>
                 </button>
               ))}
             </>
@@ -483,11 +535,11 @@ export default function Problems() {
                   <button className="btn btn-ghost btn-sm" style={{ marginTop: 8 }} onClick={() => { setSeverityFilter('all'); setRoleFilter('all'); }}>Clear Filters</button>
                 </div>
               ) : viewMode === 'hierarchy' ? (
-                <HierarchyView problems={filteredProblems} />
+                <HierarchyView problems={filteredProblems} onStatusChange={handleStatusChange} />
               ) : viewMode === 'segment' ? (
-                <SegmentView problems={filteredProblems} />
+                <SegmentView problems={filteredProblems} onStatusChange={handleStatusChange} />
               ) : (
-                <PriorityView problems={filteredProblems} />
+                <PriorityView problems={filteredProblems} onStatusChange={handleStatusChange} />
               )}
 
               <NextStepBanner

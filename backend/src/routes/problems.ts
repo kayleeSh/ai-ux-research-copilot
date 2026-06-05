@@ -48,6 +48,7 @@ problemsRouter.post('/generate', async (req: Request, res: Response): Promise<vo
           parentId:      p.parentId      ?? '',
           sourceInterviewIds:    sourceTitles.map(t => titleToId.get(t) ?? '').filter(Boolean),
           sourceInterviewTitles: sourceTitles,
+          status:        'unresolved' as const,
           createdAt:     now
         };
       }),
@@ -61,4 +62,21 @@ problemsRouter.post('/generate', async (req: Request, res: Response): Promise<vo
     console.error('[problems generate error]', message);
     res.status(500).json({ error: message });
   }
+});
+
+problemsRouter.patch('/:id/status', (req: Request, res: Response): void => {
+  const analysis = storage.getProblemsAnalysis();
+  if (!analysis) { res.status(404).json({ error: 'No analysis found' }); return; }
+
+  const { status } = req.body as { status: Problem['status'] };
+  const target = analysis.problems.find(p => p.id === req.params.id);
+  if (!target) { res.status(404).json({ error: 'Problem not found' }); return; }
+
+  const updated = storage.saveProblemsAnalysis({
+    ...analysis,
+    problems: analysis.problems.map(p =>
+      p.id === req.params.id ? { ...p, status } : p
+    )
+  });
+  res.json(updated.problems.find(p => p.id === req.params.id));
 });
