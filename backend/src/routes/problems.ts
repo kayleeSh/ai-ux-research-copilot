@@ -20,27 +20,37 @@ problemsRouter.post('/generate', async (req: Request, res: Response): Promise<vo
       return;
     }
 
-    const allPainPoints = [...new Set(interviews.flatMap(iv => iv.aiResult!.painPoints))];
-    const allQuotes     = [...new Set(interviews.flatMap(iv => iv.aiResult!.keyQuotes))];
-    const allThemes     = [...new Set(interviews.flatMap(iv => iv.aiResult!.mainThemes))];
+    const titleToId = new Map(interviews.map(iv => [iv.title, iv.id]));
 
-    const raw = await generateProblems({ painPoints: allPainPoints, keyQuotes: allQuotes, mainThemes: allThemes });
+    const raw = await generateProblems({
+      interviews: interviews.map(iv => ({
+        title:      iv.title,
+        painPoints: iv.aiResult!.painPoints,
+        keyQuotes:  iv.aiResult!.keyQuotes,
+        mainThemes: iv.aiResult!.mainThemes
+      }))
+    });
 
     const now = new Date().toISOString();
     const analysis = storage.saveProblemsAnalysis({
       id:           uuidv4(),
       rootProblem:  raw.rootProblem ?? 'Core problems identified from research findings.',
-      problems:     (raw.problems ?? []).map((p, i) => ({
-        id:            `prob-${uuidv4().slice(0, 8)}`,
-        title:         p.title         ?? `Problem ${i + 1}`,
-        description:   p.description   ?? '',
-        severity:      (p.severity     as Problem['severity']) ?? 'moderate',
-        affectedRoles: p.affectedRoles ?? [],
-        frequency:     (p.frequency    as Problem['frequency']) ?? 'per_sprint',
-        evidenceQuotes: p.evidenceQuotes ?? [],
-        parentId:      p.parentId      ?? '',
-        createdAt:     now
-      })),
+      problems:     (raw.problems ?? []).map((p, i) => {
+        const sourceTitles = p.sourceInterviewTitles ?? [];
+        return {
+          id:            `prob-${uuidv4().slice(0, 8)}`,
+          title:         p.title         ?? `Problem ${i + 1}`,
+          description:   p.description   ?? '',
+          severity:      (p.severity     as Problem['severity']) ?? 'moderate',
+          affectedRoles: p.affectedRoles ?? [],
+          frequency:     (p.frequency    as Problem['frequency']) ?? 'per_sprint',
+          evidenceQuotes: p.evidenceQuotes ?? [],
+          parentId:      p.parentId      ?? '',
+          sourceInterviewIds:    sourceTitles.map(t => titleToId.get(t) ?? '').filter(Boolean),
+          sourceInterviewTitles: sourceTitles,
+          createdAt:     now
+        };
+      }),
       interviewCount: interviews.length,
       generatedAt:    now
     });

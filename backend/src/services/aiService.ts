@@ -478,6 +478,7 @@ interface RawProblem {
   frequency?: string;
   evidenceQuotes?: string[];
   parentId?: string;
+  sourceInterviewTitles?: string[];
 }
 
 interface RawProblemsResult {
@@ -485,8 +486,12 @@ interface RawProblemsResult {
   problems?: RawProblem[];
 }
 
-const PROBLEMS_PROMPT = (painPoints: string[], quotes: string[], themes: string[]) =>
-  `You are a senior UX researcher. Identify core product problems from these research findings.
+type InterviewInput = { title: string; painPoints: string[]; keyQuotes: string[]; mainThemes: string[] };
+
+const PROBLEMS_PROMPT = (interviews: InterviewInput[]) =>
+  `You are a senior UX researcher. Identify core product problems from these labeled research findings.
+
+Each pain point and quote is prefixed with [Interview Title] so you know exactly which interview it came from.
 
 Return ONLY a valid JSON object:
 {
@@ -499,7 +504,8 @@ Return ONLY a valid JSON object:
       "affectedRoles": ["researcher", "pm", "designer", "developer", "project_manager"],
       "frequency": "daily",
       "evidenceQuotes": ["direct quote supporting this problem"],
-      "parentId": ""
+      "parentId": "",
+      "sourceInterviewTitles": ["Exact interview title this problem is drawn from"]
     }
   ]
 }
@@ -510,38 +516,72 @@ Rules:
 - affectedRoles: include only roles genuinely impacted
 - frequency: "daily" | "per_sprint" | "occasional"
 - parentId: if a problem is a sub-problem, set to the parent problem's title; otherwise leave empty
-- evidenceQuotes: 1-2 direct quotes from research
+- evidenceQuotes: 1-2 direct quotes from the labeled input below
+- sourceInterviewTitles: list ONLY the exact interview title(s) whose pain points or quotes this problem is based on
 
-Pain Points:\n${painPoints.slice(0, 8).join('\n')}
-Key Quotes:\n${quotes.slice(0, 6).join('\n')}
-Themes: ${themes.join(', ')}`;
+${interviews.map(iv => `--- Interview: ${iv.title} ---
+Pain Points:
+${iv.painPoints.slice(0, 6).map(p => `[${iv.title}]: ${p}`).join('\n')}
+Key Quotes:
+${iv.keyQuotes.slice(0, 5).map(q => `[${iv.title}]: ${q}`).join('\n')}
+Themes: ${iv.mainThemes.join(', ')}`).join('\n\n')}`;
 
-function mockGenerateProblems(painPoints: string[], quotes: string[]): RawProblemsResult {
+function mockGenerateProblems(interviews: InterviewInput[]): RawProblemsResult {
+  const allThemes = [...new Set(interviews.flatMap(iv => iv.mainThemes))];
+  const topThemes = allThemes.slice(0, 3);
+  const rootProblem = topThemes.length > 0
+    ? `Users face compounding friction from ${topThemes.join(', ').toLowerCase()}, preventing effective work and informed decision-making across teams.`
+    : 'Users face significant workflow friction that blocks productivity and cross-team alignment.';
+
+  const severities:  Array<'critical' | 'moderate' | 'minor'>    = ['critical', 'moderate', 'minor'];
+  const frequencies: Array<'daily' | 'per_sprint' | 'occasional'> = ['daily', 'per_sprint', 'occasional'];
+  const roleSets = [['researcher', 'pm'], ['pm', 'designer', 'developer'], ['researcher']];
+
+  const problems: RawProblem[] = [];
+
+  for (const iv of interviews) {
+    const usablePains  = iv.painPoints.filter(p => p.trim().length > 10).slice(0, 2);
+    const usableQuotes = iv.keyQuotes.filter(q => q.trim().length > 10);
+
+    usablePains.forEach((pain, i) => {
+      const words = pain.split(' ');
+      const title = words.length <= 8 ? pain : words.slice(0, 8).join(' ') + '…';
+      problems.push({
+        title,
+        description: `${pain} This creates downstream friction affecting team workflows and outcomes across roles.`,
+        severity:      severities[i]  ?? 'moderate',
+        affectedRoles: roleSets[i]    ?? ['researcher'],
+        frequency:     frequencies[i] ?? 'per_sprint',
+        evidenceQuotes: [usableQuotes[i] ?? pain].filter(Boolean),
+        parentId:      '',
+        sourceInterviewTitles: [iv.title]
+      });
+    });
+  }
+
   return {
-    rootProblem: 'Teams lack a unified research-to-decision pipeline, causing insights to be lost between research, design, and development handoffs.',
-    problems: [
-      { title: 'Research insights fail to reach decision-makers', description: 'Research findings exist but never surface when decisions are being made. Teams proceed without evidence that already exists.', severity: 'critical', affectedRoles: ['researcher', 'pm'], frequency: 'per_sprint', evidenceQuotes: [painPoints[0] ?? ''].filter(Boolean), parentId: '' },
-      { title: 'Tool fragmentation breaks daily focus', description: 'Users context-switch between 10+ tools daily, spending more time managing tools than doing actual work.', severity: 'critical', affectedRoles: ['researcher', 'designer', 'pm'], frequency: 'daily', evidenceQuotes: [quotes[0] ?? ''].filter(Boolean), parentId: '' },
-      { title: 'No single source of truth causes misalignment', description: 'Research, specs, and decisions live in different tools with no sync. Teams discover misalignment at launch — too late to fix cheaply.', severity: 'critical', affectedRoles: ['pm', 'designer', 'developer', 'project_manager'], frequency: 'per_sprint', evidenceQuotes: [painPoints[1] ?? ''].filter(Boolean), parentId: '' },
-      { title: 'Research share-out takes 8x longer than necessary', description: 'Preparing findings for stakeholders takes 2 hours for a 15-minute task. Manual copying degrades quality and discourages sharing.', severity: 'moderate', affectedRoles: ['researcher'], frequency: 'per_sprint', evidenceQuotes: [quotes[1] ?? ''].filter(Boolean), parentId: 'Research insights fail to reach decision-makers' }
-    ]
+    rootProblem,
+    problems: problems.length > 0 ? problems : [{
+      title: 'No pain points found in analyzed interviews',
+      description: 'Upload and analyze at least one interview to generate a real problem analysis.',
+      severity: 'minor', affectedRoles: [], frequency: 'occasional', evidenceQuotes: [], parentId: '',
+      sourceInterviewTitles: []
+    }]
   };
 }
 
 export async function generateProblems(data: {
-  painPoints: string[];
-  keyQuotes: string[];
-  mainThemes: string[];
+  interviews: InterviewInput[];
 }): Promise<RawProblemsResult> {
   if (!process.env.GROQ_API_KEY) {
     await new Promise(r => setTimeout(r, 1200));
-    return mockGenerateProblems(data.painPoints, data.keyQuotes);
+    return mockGenerateProblems(data.interviews);
   }
 
   console.log('[groq] generating problem analysis...');
   const res = await groqFetch({
     model: 'llama-3.1-8b-instant',
-    messages: [{ role: 'user', content: PROBLEMS_PROMPT(data.painPoints, data.keyQuotes, data.mainThemes) }],
+    messages: [{ role: 'user', content: PROBLEMS_PROMPT(data.interviews) }],
     temperature: 0.3,
     response_format: { type: 'json_object' }
   });
@@ -630,36 +670,110 @@ Pain Points:\n${painPoints.slice(0, 6).join('\n')}
 Themes: ${themes.join(', ')}
 Decisions:\n${decisions.slice(0, 5).join('\n')}`;
 
-function mockGenerateBriefing(rootProblem: string, interviewCount: number): RawBriefing {
+function mockGenerateBriefing(
+  rootProblem: string,
+  problems: Array<{ title: string; description: string }>,
+  painPoints: string[],
+  interviewCount: number
+): RawBriefing {
+  const conf = interviewCount >= 5 ? 'high' : interviewCount >= 2 ? 'medium' : 'low';
+  const p0    = problems[0]?.title     ?? 'core workflow friction';
+  const p1    = problems[1]?.title     ?? 'information fragmentation';
+  const pain0 = painPoints[0]?.slice(0, 60) ?? 'key pain point identified in research';
+  const pain1 = painPoints[1]?.slice(0, 60) ?? 'secondary pain point identified in research';
+
   return {
-    confidence: interviewCount >= 5 ? 'high' : interviewCount >= 2 ? 'medium' : 'low',
+    confidence: conf,
     pm: {
-      objectives: ['Eliminate research-to-decision lag so teams act on evidence within 48 hours', 'Reduce tool fragmentation overhead to free 30% more time for actual product thinking'],
-      okrs: [{ objective: 'Make research immediately actionable', keyResults: ['Reduce research-to-decision time from 2 weeks to 48 hours', 'Increase research utilization to 70% per sprint', 'Cut share-out prep from 2 hours to 15 minutes'] }],
-      priorityStackRank: ['#1: Unified workspace — highest frequency, affects all roles', '#2: Automated share-out — directly recoverable time', '#3: Research traceability — reduces rework at handoff'],
-      assumptionsAndRisks: ['Assumption: teams adopt tools that reduce switching, not add to it', 'Risk: AI summaries may not meet researcher accuracy standards', 'Risk: PMs may not change habits without a forcing function'],
-      methodsAndTools: ['Track research-to-decision time via timestamp delta in Decisions Hub', 'Measure share-out prep via monthly user survey', 'Monitor research utilization via sourceInsightId count per sprint']
+      objectives: [
+        `Resolve "${p0}" to restore productive daily workflows across all roles`,
+        `Address "${p1}" to enable cross-team alignment at critical decision points`
+      ],
+      okrs: [{
+        objective: `Eliminate root cause: ${rootProblem.slice(0, 80)}`,
+        keyResults: [
+          `Reduce time lost to "${pain0.slice(0, 40)}" by 50% within 2 sprints`,
+          `Increase team satisfaction score related to workflow by 30%`,
+          `Reduce manual workarounds from ${problems.length} identified patterns to zero`
+        ]
+      }],
+      priorityStackRank: problems.slice(0, 3).map((p, i) =>
+        `#${i + 1}: ${p.title} — ${i === 0 ? 'highest frequency, affects most roles' : i === 1 ? 'directly recoverable time' : 'reduces rework at handoff'}`
+      ),
+      assumptionsAndRisks: [
+        `Assumption: solving "${p0}" will unblock downstream workflow issues`,
+        `Risk: users may resist change if existing workarounds feel "good enough"`,
+        `Risk: addressing all ${problems.length} problems simultaneously may dilute execution focus`
+      ],
+      methodsAndTools: [
+        `Track "${pain0.slice(0, 40)}" resolution via pre/post task completion survey`,
+        `Measure workflow efficiency via session recording before and after deployment`,
+        `Monitor support requests related to identified pain points week-over-week`
+      ]
     },
     designer: {
-      userNeeds: ['Users need to find relevant research without leaving their design tool', 'Users need to trace every design decision to a user need', 'Users need to share findings in a format stakeholders will read'],
-      jobsToBeDone: ['When starting a sprint, I want all relevant research in one place, so I can design without hunting 5 tools', 'When presenting work, I want to share a single link, so I can stop building slide decks manually'],
-      designPrinciples: ['Zero context-switching: research accessible without leaving the design canvas', 'Evidence-first: every decision traceable to a user quote', 'Progressive disclosure: show minimum, reveal depth on demand'],
-      deliverables: ['Unified research panel for design tools', 'Stakeholder briefing auto-generated from synthesis', 'Design decision log with evidence links'],
-      successCriteria: ['Designers cite evidence in 80% of critiques without prompting', 'Stakeholder prep time under 20 minutes', 'Zero "where does this come from?" questions in review']
+      userNeeds: [
+        `Users need to accomplish their core workflow without encountering "${pain0.slice(0, 50)}"`,
+        `Users need clear feedback when the system resolves "${p0}"`,
+        `Users need a workflow that doesn't require manual workarounds for "${p1}"`
+      ],
+      jobsToBeDone: [
+        `When I encounter "${pain0.slice(0, 40)}", I want an automated solution, so I can focus on high-value work`,
+        `When I collaborate across teams, I want a single source of truth, so I can avoid duplicating effort`
+      ],
+      designPrinciples: [
+        `Eliminate the need for workarounds surfaced in research`,
+        `Make the right action the easiest action for every identified pain point`,
+        `Surface information at the moment of need, not retrospectively`
+      ],
+      deliverables: problems.slice(0, 3).map(p => `Design solution addressing: ${p.title}`),
+      successCriteria: [
+        `Users complete core tasks without triggering "${pain0.slice(0, 40)}"`,
+        `Zero workarounds required for ${problems.length} identified problem scenarios`,
+        `User satisfaction with workflow improves measurably post-deployment`
+      ]
     },
     developer: {
-      deliverables: ['Transcript ingestion + AI analysis API', 'Cross-interview synthesis engine', 'Research evidence traceability system', 'Role-based briefing generator endpoint'],
-      acceptanceCriteria: ['Transcript API: processes 10k words in under 30 seconds', 'Synthesis: pattern detection across 3+ interviews', 'Traceability: every Decision stores sourceInsightId', 'Briefing: complete role outputs in under 20 seconds'],
-      technicalConstraints: ['Must not change researcher recording workflow', 'Handles transcripts 500–20,000 words', 'All data stays within the organization'],
-      dependencies: ['AI provider API for analysis', 'Auth system before multi-user features', 'Persistent storage to replace in-memory store'],
-      nonGoals: ['NOT real-time collaborative editing this phase', 'NOT Jira/Linear integration in MVP', 'NOT custom AI model — using LLMs via API']
+      deliverables: problems.slice(0, 4).map(p => `Implement fix for: ${p.title}`),
+      acceptanceCriteria: problems.slice(0, 3).map(p =>
+        `"${p.title.slice(0, 50)}": user can complete task without the identified friction`
+      ),
+      technicalConstraints: [
+        `Solution must not introduce new steps to resolve "${p0}"`,
+        `Must handle all ${problems.length} identified problem scenarios without regression`,
+        `Performance must not degrade — existing workflows must remain at current speed or faster`
+      ],
+      dependencies: [
+        `Design specs for "${p0}" must be finalized before development begins`,
+        `User validation of proposed solution for "${p1}" required before full build`,
+        `Analytics instrumentation must be in place to measure KR attainment`
+      ],
+      nonGoals: [
+        `NOT solving problems outside the ${problems.length} identified in this research cycle`,
+        `NOT rebuilding features unrelated to identified pain points`,
+        `NOT optimizing for edge cases not represented in research`
+      ]
     },
     projectManager: {
-      deliverables: ['Upload + AI analysis pipeline', 'Insights validation workspace', 'Cross-interview synthesis', 'Decisions Hub', 'Role briefing generator', 'Deploy with auth + persistence'],
-      milestones: ['Phase 1 (Week 1-2): Core AI pipeline', 'Phase 2 (Week 3-4): Synthesis + Decisions', 'Phase 3 (Week 5-6): Problem analysis + Briefing', 'Phase 4 (Week 7-8): Auth + deploy'],
-      dependenciesMap: ['Upload must complete before Insights', 'Insights before Synthesis', 'Synthesis feeds Decisions', 'Problems must exist before Briefing'],
-      effortEstimates: ['Upload + analysis: M (1-2 weeks)', 'Insights UI: S (3-5 days)', 'Synthesis: L (2-3 weeks)', 'Briefing: L (2-3 weeks)', 'Auth + storage: XL (3-4 weeks)'],
-      openQuestions: ['Who owns research data — individual or team account?', 'What happens to decisions when transcripts are updated?', 'Do we need role-based access before first enterprise customer?']
+      deliverables: problems.map(p => p.title),
+      milestones: [
+        `Phase 1 (Week 1-2): Design + validate solution for "${p0}"`,
+        `Phase 2 (Week 3-4): Build + test core fixes for top ${Math.min(problems.length, 2)} problems`,
+        `Phase 3 (Week 5-6): Ship remaining fixes + measure KRs against baseline`
+      ],
+      dependenciesMap: problems.slice(0, 3).map((p, i) =>
+        i === 0
+          ? `Research sign-off required before "${p.title}" design begins`
+          : `"${problems[i - 1].title}" must be validated before "${p.title}" build starts`
+      ),
+      effortEstimates: problems.map((p, i) =>
+        `${p.title.slice(0, 40)}: ${i === 0 ? 'L (2-3 weeks)' : i === 1 ? 'M (1-2 weeks)' : 'S (3-5 days)'}`
+      ),
+      openQuestions: [
+        `Which of the ${problems.length} problems has the highest user impact and should ship first?`,
+        `How do we validate that the solution for "${p0}" is working before full rollout?`,
+        `Who is the decision-maker if "${p1}" solution conflicts with existing product direction?`
+      ]
     }
   };
 }
@@ -674,7 +788,7 @@ export async function generateBriefing(data: {
 }): Promise<RawBriefing> {
   if (!process.env.GROQ_API_KEY) {
     await new Promise(r => setTimeout(r, 1500));
-    return mockGenerateBriefing(data.rootProblem, data.interviewCount);
+    return mockGenerateBriefing(data.rootProblem, data.problems, data.painPoints, data.interviewCount);
   }
 
   const problemsStr = data.problems.map(p => `- ${p.title}: ${p.description}`).join('\n');

@@ -65,6 +65,8 @@ export interface Problem {
   frequency: 'daily' | 'per_sprint' | 'occasional';
   evidenceQuotes: string[];
   parentId: string;
+  sourceInterviewIds: string[];
+  sourceInterviewTitles: string[];
   createdAt: string;
 }
 

@@ -80,6 +80,29 @@ function ProblemCard({ problem, isChild = false }: { problem: Problem; isChild?:
         {problem.description}
       </p>
 
+      {/* Source interviews */}
+      {problem.sourceInterviewTitles && problem.sourceInterviewTitles.length > 0 && (
+        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center', marginBottom: 8 }}>
+          <span style={{ fontSize: '0.72rem', color: '#9ca3af', flexShrink: 0 }}>Source:</span>
+          {problem.sourceInterviewTitles.map((title, i) => (
+            <span
+              key={i}
+              style={{
+                fontSize: '0.7rem',
+                background: '#f0f9ff',
+                color: '#0369a1',
+                padding: '2px 8px',
+                borderRadius: 100,
+                border: '1px solid #bae6fd',
+                fontWeight: 500,
+              }}
+            >
+              📋 {title}
+            </span>
+          ))}
+        </div>
+      )}
+
       {/* Evidence */}
       {problem.evidenceQuotes.length > 0 && (
         <div>
