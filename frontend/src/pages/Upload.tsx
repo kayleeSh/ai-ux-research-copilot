@@ -2,6 +2,7 @@ import { useState, useRef, DragEvent, ChangeEvent, useEffect, useCallback } from
 import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../api/client';
 import { Interview } from '../types';
+import { NextStepBanner } from '../components/NextStepBanner';
 
 // ── Analyzing Loader ──────────────────────────────────────────────────────────
 
@@ -470,6 +471,16 @@ export default function Upload() {
           })
         )}
       </div>
+
+      {analyzed.length > 0 && (
+        <NextStepBanner
+          icon="💡"
+          title="Review your insights"
+          description="Browse AI-extracted pain points, themes, and quotes from your interviews"
+          to="/insights"
+          buttonText="View Insights →"
+        />
+      )}
 
       {/* ── Modal ── */}
       {showModal && (

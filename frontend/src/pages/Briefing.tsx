@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client';
 import { Briefing, OKR } from '../types';
+import { NextStepBanner } from '../components/NextStepBanner';
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
@@ -426,6 +427,13 @@ export default function PlaybookPage() {
               {activeRole === 'designer'        && <DesignerTab       data={briefing.designer}       onLog={handleLog} />}
               {activeRole === 'developer'       && <DeveloperTab      data={briefing.developer}      onLog={handleLog} />}
               {activeRole === 'projectManager'  && <ProjectManagerTab data={briefing.projectManager} onLog={handleLog} />}
+              <NextStepBanner
+                icon="◈"
+                title="Log decisions"
+                description="Track which research findings have been turned into actionable product decisions"
+                to="/decisions"
+                buttonText="View Decision Log →"
+              />
             </>
           )}
 

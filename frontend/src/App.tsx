@@ -29,14 +29,14 @@ function Nav() {
         <Link to="/synthesis" className={isActive('/synthesis') ? 'active' : ''}>
           Synthesis
         </Link>
-        <Link to="/decisions" className={isActive('/decisions') ? 'active' : ''}>
-          Decisions
-        </Link>
         <Link to="/problems" className={isActive('/problems') ? 'active' : ''}>
           Problems
         </Link>
         <Link to="/playbook" className={isActive('/playbook') ? 'active' : ''}>
           Playbook
+        </Link>
+        <Link to="/decisions" className={isActive('/decisions') ? 'active' : ''}>
+          Decisions
         </Link>
       </div>
     </nav>

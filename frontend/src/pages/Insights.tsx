@@ -2,6 +2,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client';
 import { Interview, Decision } from '../types';
+import { NextStepBanner } from '../components/NextStepBanner';
 
 type Status = 'pending' | 'approved' | 'rejected';
 
@@ -71,7 +72,7 @@ function DecisionFromInsightModal({
         title,
         priority,
         note,
-        status: 'open',
+        status: 'under_discussion',
         sourceType: 'ai_generated',
         sourceInterviewId:    interview.id,
         sourceInterviewTitle: interview.title,
@@ -417,6 +418,14 @@ export default function Insights() {
               </div>
             );
           })}
+
+          <NextStepBanner
+            icon="🔗"
+            title="Synthesize across interviews"
+            description="Find patterns, shared themes, and recommendations across all your interviews"
+            to="/synthesis"
+            buttonText="Go to Synthesis →"
+          />
 
           <div style={{ height: 80 }} />
         </main>

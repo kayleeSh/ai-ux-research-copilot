@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client';
 import { ProblemsAnalysis, Problem } from '../types';
+import { NextStepBanner } from '../components/NextStepBanner';
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
@@ -470,20 +471,13 @@ export default function Problems() {
                 <PriorityView problems={filteredProblems} />
               )}
 
-              {/* CTA to Briefing */}
-              <div className="synthesis-section" style={{ marginTop: 24, padding: '16px 20px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: 3 }}>Ready to see what each role should do about this?</div>
-                    <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>
-                      Generate role-specific objectives, OKRs, deliverables, and more
-                    </div>
-                  </div>
-                  <Link to="/playbook" className="btn btn-primary" style={{ flexShrink: 0 }}>
-                    View Playbook →
-                  </Link>
-                </div>
-              </div>
+              <NextStepBanner
+                icon="📖"
+                title="Generate your Research Playbook"
+                description="Get role-specific objectives, OKRs, deliverables, and success criteria for PM, Designer, Developer, and Project Manager"
+                to="/playbook"
+                buttonText="View Playbook →"
+              />
             </>
           )}
 
