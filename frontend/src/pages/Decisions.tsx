@@ -165,15 +165,30 @@ function DecisionCard({
       </div>
 
       {/* Source */}
-      {decision.sourceInterviewTitle && (
-        <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span>From:</span>
-          {decision.sourceInterviewId ? (
-            <Link to={`/workspace/${decision.sourceInterviewId}`} style={{ color: '#4f46e5', textDecoration: 'none', fontWeight: 500 }}>
-              {decision.sourceInterviewTitle} →
-            </Link>
-          ) : (
-            <span style={{ color: '#6b7280', fontWeight: 500 }}>{decision.sourceInterviewTitle}</span>
+      {(decision.sourceProblemTitle || decision.sourceInterviewTitle) && (
+        <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+          {decision.sourceProblemTitle && (
+            <>
+              <span>Problem:</span>
+              <Link to="/problems" style={{ color: '#4f46e5', textDecoration: 'none', fontWeight: 500 }}>
+                {decision.sourceProblemTitle} →
+              </Link>
+            </>
+          )}
+          {decision.sourceProblemTitle && decision.sourceInterviewTitle && (
+            <span style={{ color: '#d1d5db' }}>·</span>
+          )}
+          {decision.sourceInterviewTitle && (
+            <>
+              <span>Interview:</span>
+              {decision.sourceInterviewId ? (
+                <Link to={`/workspace/${decision.sourceInterviewId}`} style={{ color: '#6b7280', textDecoration: 'none', fontWeight: 500 }}>
+                  {decision.sourceInterviewTitle} →
+                </Link>
+              ) : (
+                <span style={{ color: '#6b7280', fontWeight: 500 }}>{decision.sourceInterviewTitle}</span>
+              )}
+            </>
           )}
         </div>
       )}

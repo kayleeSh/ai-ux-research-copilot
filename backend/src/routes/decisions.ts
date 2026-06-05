@@ -26,6 +26,8 @@ decisionsRouter.post('/', (req: Request, res: Response): void => {
     sourceInterviewId:    body.sourceInterviewId    ?? '',
     sourceInterviewTitle: body.sourceInterviewTitle ?? '',
     sourceInsightId:      body.sourceInsightId      ?? '',
+    sourceProblemId:      body.sourceProblemId      ?? '',
+    sourceProblemTitle:   body.sourceProblemTitle   ?? '',
     statusHistory:        [{ status: initialStatus, changedAt: new Date().toISOString() }],
     createdAt:            new Date().toISOString(),
     updatedAt:            new Date().toISOString()

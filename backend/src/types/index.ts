@@ -132,6 +132,8 @@ export interface Decision {
   sourceInterviewId: string;
   sourceInterviewTitle: string;
   sourceInsightId: string;
+  sourceProblemId: string;
+  sourceProblemTitle: string;
   statusHistory: Array<{ status: string; changedAt: string }>;
   createdAt: string;
   updatedAt: string;

@@ -41,29 +41,51 @@ type ViewMode = 'hierarchy' | 'segment' | 'priority';
 function LogProblemButton({ problem }: { problem: Problem }) {
   const [logged, setLogged]   = useState(false);
   const [logging, setLogging] = useState(false);
-  if (logged) return <span style={{ fontSize: '0.72rem', color: '#059669', fontWeight: 500 }}>✓ Logged to Decisions</span>;
+
+  const row: React.CSSProperties = {
+    marginTop: 14, paddingTop: 12, borderTop: '1px solid #f3f4f6',
+    display: 'flex', justifyContent: 'flex-end', alignItems: 'center',
+  };
+
+  if (logged) return (
+    <div style={row}>
+      <span style={{ fontSize: '0.8rem', color: '#059669', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}>
+        ✓ Added to Decision Log
+      </span>
+    </div>
+  );
+
   return (
-    <button
-      disabled={logging}
-      onClick={async () => {
-        setLogging(true);
-        try {
-          await api.createDecision({
-            title:                problem.title.length > 120 ? problem.title.slice(0, 120) + '…' : problem.title,
-            status:               'under_discussion',
-            priority:             problem.severity === 'critical' ? 'high' : problem.severity === 'moderate' ? 'medium' : 'low',
-            note:                 problem.description,
-            evidenceQuotes:       problem.evidenceQuotes,
-            sourceType:           'ai_generated',
-            sourceInterviewTitle: problem.sourceInterviewTitles?.[0] ?? '',
-          });
-          setLogged(true);
-        } catch { setLogging(false); }
-      }}
-      style={{ background: 'none', border: '1px solid #e5e7eb', borderRadius: 6, padding: '3px 10px', fontSize: '0.72rem', cursor: 'pointer', color: '#6b7280', whiteSpace: 'nowrap', fontFamily: 'inherit' }}
-    >
-      {logging ? '…' : '+ Log Decision'}
-    </button>
+    <div style={row}>
+      <button
+        disabled={logging}
+        onClick={async () => {
+          setLogging(true);
+          try {
+            await api.createDecision({
+              title:                problem.title.length > 120 ? problem.title.slice(0, 120) + '…' : problem.title,
+              status:               'under_discussion',
+              priority:             problem.severity === 'critical' ? 'high' : problem.severity === 'moderate' ? 'medium' : 'low',
+              note:                 problem.description,
+              evidenceQuotes:       problem.evidenceQuotes,
+              sourceType:           'ai_generated',
+              sourceInterviewTitle: problem.sourceInterviewTitles?.[0] ?? '',
+              sourceProblemId:      problem.id,
+              sourceProblemTitle:   problem.title,
+            });
+            setLogged(true);
+          } catch { setLogging(false); }
+        }}
+        style={{
+          background: '#eef2ff', color: '#4f46e5', border: '1px solid #c7d2fe',
+          borderRadius: 8, padding: '7px 16px', fontSize: '0.8rem', fontWeight: 600,
+          cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
+          fontFamily: 'inherit', whiteSpace: 'nowrap',
+        }}
+      >
+        {logging ? '…' : '◈ Log as Decision'}
+      </button>
+    </div>
   );
 }
 
@@ -154,10 +176,7 @@ function ProblemCard({ problem, isChild = false }: { problem: Problem; isChild?:
         </div>
       )}
 
-      {/* Log to Decision Log */}
-      <div style={{ marginTop: 10, display: 'flex', justifyContent: 'flex-end' }}>
-        <LogProblemButton problem={problem} />
-      </div>
+      <LogProblemButton problem={problem} />
     </div>
   );
 }

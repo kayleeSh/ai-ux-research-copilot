@@ -35,30 +35,49 @@ function SectionCard({ title, icon, children }: { title: string; icon: string; c
 function LogButton({ item, onLog }: { item: string; onLog: (item: string) => Promise<void> }) {
   const [logged, setLogged]   = useState(false);
   const [logging, setLogging] = useState(false);
-  if (logged) return <span style={{ fontSize: '0.68rem', color: '#059669', flexShrink: 0, fontWeight: 500 }}>✓ Logged</span>;
+  if (logged) return (
+    <span style={{ fontSize: '0.8rem', color: '#059669', fontWeight: 600, whiteSpace: 'nowrap' }}>
+      ✓ Added to Decision Log
+    </span>
+  );
   return (
     <button
       disabled={logging}
       onClick={async () => { setLogging(true); await onLog(item); setLogged(true); }}
-      style={{ background: 'none', border: '1px solid #e5e7eb', borderRadius: 6, padding: '2px 8px', fontSize: '0.68rem', cursor: 'pointer', color: '#9ca3af', flexShrink: 0, whiteSpace: 'nowrap', fontFamily: 'inherit' }}
+      style={{
+        background: '#eef2ff', color: '#4f46e5', border: '1px solid #c7d2fe',
+        borderRadius: 8, padding: '7px 16px', fontSize: '0.8rem', fontWeight: 600,
+        cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit',
+        display: 'flex', alignItems: 'center', gap: 6,
+      }}
     >
-      + Log
+      {logging ? '…' : '◈ Log as Decision'}
     </button>
+  );
+}
+
+function LogRow({ item, onLog }: { item: string; onLog: (item: string) => Promise<void> }) {
+  return (
+    <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #f3f4f6', display: 'flex', justifyContent: 'flex-end' }}>
+      <LogButton item={item} onLog={onLog} />
+    </div>
   );
 }
 
 function BulletList({ items, color = '#374151', onLog }: { items: string[]; color?: string; onLog?: (item: string) => Promise<void> }) {
   if (items.length === 0) return <p style={{ fontSize: '0.85rem', color: '#9ca3af' }}>None specified.</p>;
   return (
-    <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       {items.map((item, i) => (
-        <li key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: '0.875rem', color, lineHeight: 1.6 }}>
-          <span style={{ color: '#d1d5db', flexShrink: 0, marginTop: 3 }}>›</span>
-          <span style={{ flex: 1 }}>{item}</span>
-          {onLog && <LogButton item={item} onLog={onLog} />}
-        </li>
+        <div key={i} style={onLog ? { border: '1px solid #f3f4f6', borderRadius: 8, padding: '10px 12px 0', background: '#fafafa' } : {}}>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: '0.875rem', color, lineHeight: 1.6 }}>
+            <span style={{ color: '#d1d5db', flexShrink: 0, marginTop: 3 }}>›</span>
+            <span style={{ flex: 1 }}>{item}</span>
+          </div>
+          {onLog && <LogRow item={item} onLog={onLog} />}
+        </div>
       ))}
-    </ul>
+    </div>
   );
 }
 
@@ -67,12 +86,14 @@ function NumberedList({ items, onLog }: { items: string[]; onLog?: (item: string
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       {items.map((item, i) => (
-        <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', fontSize: '0.875rem', color: '#374151', lineHeight: 1.6 }}>
-          <span style={{ background: '#f3f4f6', color: '#6b7280', borderRadius: '50%', width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 700, flexShrink: 0 }}>
-            {i + 1}
-          </span>
-          <span style={{ flex: 1 }}>{item}</span>
-          {onLog && <LogButton item={item} onLog={onLog} />}
+        <div key={i} style={onLog ? { border: '1px solid #f3f4f6', borderRadius: 8, padding: '10px 12px 0', background: '#fafafa' } : {}}>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', fontSize: '0.875rem', color: '#374151', lineHeight: 1.6 }}>
+            <span style={{ background: '#f3f4f6', color: '#6b7280', borderRadius: '50%', width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 700, flexShrink: 0 }}>
+              {i + 1}
+            </span>
+            <span style={{ flex: 1 }}>{item}</span>
+          </div>
+          {onLog && <LogRow item={item} onLog={onLog} />}
         </div>
       ))}
     </div>
@@ -81,12 +102,11 @@ function NumberedList({ items, onLog }: { items: string[]; onLog?: (item: string
 
 function OKRCard({ okr, onLog }: { okr: OKR; onLog?: (item: string) => Promise<void> }) {
   return (
-    <div style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 10, padding: '14px 16px', marginBottom: 10 }}>
-      <div style={{ fontWeight: 600, fontSize: '0.875rem', color: '#111827', marginBottom: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-        <span>🎯 {okr.objective}</span>
-        {onLog && <LogButton item={okr.objective} onLog={onLog} />}
+    <div style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 10, padding: '14px 16px 0', marginBottom: 10 }}>
+      <div style={{ fontWeight: 600, fontSize: '0.875rem', color: '#111827', marginBottom: 10 }}>
+        🎯 {okr.objective}
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: onLog ? 0 : 14 }}>
         {okr.keyResults.map((kr, i) => (
           <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: '0.82rem', color: '#4b5563', lineHeight: 1.5 }}>
             <span style={{ color: '#059669', flexShrink: 0, fontWeight: 700 }}>KR{i + 1}</span>
@@ -94,6 +114,11 @@ function OKRCard({ okr, onLog }: { okr: OKR; onLog?: (item: string) => Promise<v
           </div>
         ))}
       </div>
+      {onLog && (
+        <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #e5e7eb', display: 'flex', justifyContent: 'flex-end', paddingBottom: 14 }}>
+          <LogButton item={okr.objective} onLog={onLog} />
+        </div>
+      )}
     </div>
   );
 }
@@ -189,10 +214,14 @@ function DeveloperTab({ data, onLog }: { data: Briefing['developer']; onLog: (it
       <SectionCard title="Acceptance Criteria" icon="✅">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {data.acceptanceCriteria.map((ac, i) => (
-            <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: '0.875rem', color: '#374151', lineHeight: 1.5, padding: '8px 12px', background: '#f0fdf4', borderRadius: 8, border: '1px solid #bbf7d0' }}>
-              <span style={{ color: '#059669', flexShrink: 0 }}>✓</span>
-              <span style={{ flex: 1 }}>{ac}</span>
-              <LogButton item={ac} onLog={onLog} />
+            <div key={i} style={{ background: '#f0fdf4', borderRadius: 8, border: '1px solid #bbf7d0', padding: '10px 12px 0' }}>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: '0.875rem', color: '#374151', lineHeight: 1.5 }}>
+                <span style={{ color: '#059669', flexShrink: 0 }}>✓</span>
+                <span style={{ flex: 1 }}>{ac}</span>
+              </div>
+              <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #bbf7d0', display: 'flex', justifyContent: 'flex-end', paddingBottom: 12 }}>
+                <LogButton item={ac} onLog={onLog} />
+              </div>
             </div>
           ))}
         </div>
@@ -226,12 +255,14 @@ function ProjectManagerTab({ data, onLog }: { data: Briefing['projectManager']; 
       <SectionCard title="Milestones" icon="🏁">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {data.milestones.map((m, i) => (
-            <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', fontSize: '0.875rem', color: '#374151', lineHeight: 1.5 }}>
-              <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#eef2ff', border: '2px solid #818cf8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 700, color: '#4f46e5', flexShrink: 0 }}>
-                {i + 1}
+            <div key={i} style={{ border: '1px solid #f3f4f6', borderRadius: 8, padding: '10px 12px 0', background: '#fafafa' }}>
+              <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', fontSize: '0.875rem', color: '#374151', lineHeight: 1.5 }}>
+                <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#eef2ff', border: '2px solid #818cf8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 700, color: '#4f46e5', flexShrink: 0 }}>
+                  {i + 1}
+                </div>
+                <span style={{ paddingTop: 4, flex: 1 }}>{m}</span>
               </div>
-              <span style={{ paddingTop: 4, flex: 1 }}>{m}</span>
-              <LogButton item={m} onLog={onLog} />
+              <LogRow item={m} onLog={onLog} />
             </div>
           ))}
         </div>
