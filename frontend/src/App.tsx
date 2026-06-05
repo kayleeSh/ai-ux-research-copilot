@@ -5,6 +5,8 @@ import Insights from './pages/Insights';
 import Report from './pages/Report';
 import Synthesis from './pages/Synthesis';
 import Decisions from './pages/Decisions';
+import Problems from './pages/Problems';
+import Briefing from './pages/Briefing';
 
 function Nav() {
   const loc = useLocation();
@@ -30,6 +32,12 @@ function Nav() {
         <Link to="/decisions" className={isActive('/decisions') ? 'active' : ''}>
           Decisions
         </Link>
+        <Link to="/problems" className={isActive('/problems') ? 'active' : ''}>
+          Problems
+        </Link>
+        <Link to="/briefing" className={isActive('/briefing') ? 'active' : ''}>
+          Briefing
+        </Link>
       </div>
     </nav>
   );
@@ -48,6 +56,8 @@ export default function App() {
           <Route path="/report/:id" element={<Report />} />
           <Route path="/synthesis" element={<Synthesis />} />
           <Route path="/decisions" element={<Decisions />} />
+          <Route path="/problems" element={<Problems />} />
+          <Route path="/briefing" element={<Briefing />} />
         </Routes>
       </main>
     </BrowserRouter>

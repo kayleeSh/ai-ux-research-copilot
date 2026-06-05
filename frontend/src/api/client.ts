@@ -1,4 +1,4 @@
-import { Interview, AIResult, Report, SynthesisResult, Decision } from '../types';
+import { Interview, AIResult, Report, SynthesisResult, Decision, ProblemsAnalysis, Briefing } from '../types';
 
 const BASE = '/api';
 
@@ -171,5 +171,15 @@ export const api = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
-    })
+    }),
+
+  // ── Problems ──────────────────────────────────────────────────────────────
+  getProblems: () => request<ProblemsAnalysis>('/problems'),
+  generateProblems: () =>
+    request<ProblemsAnalysis>('/problems/generate', { method: 'POST' }),
+
+  // ── Briefing ──────────────────────────────────────────────────────────────
+  getBriefing: () => request<Briefing>('/briefing'),
+  generateBriefing: () =>
+    request<Briefing>('/briefing/generate', { method: 'POST' })
 };

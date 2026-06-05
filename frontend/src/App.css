@@ -980,6 +980,49 @@ body {
   gap: 16px;
 }
 
+/* ── Problems Page ───────────────────────────────── */
+.problem-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-left: 3px solid #d1d5db;
+  border-radius: 10px;
+  padding: 16px 18px;
+  transition: box-shadow 0.12s;
+  margin-bottom: 10px;
+}
+
+.problem-card:hover {
+  box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+}
+
+.root-problem-card {
+  background: linear-gradient(135deg, #f5f3ff, #eff6ff);
+  border: 2px solid #c7d2fe;
+  border-radius: 12px;
+  padding: 20px 24px;
+}
+
+/* ── Briefing Page ────────────────────────────────── */
+.briefing-section {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 14px;
+}
+
+.briefing-section-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #4b5563;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 /* ── Decisions Page ──────────────────────────────── */
 .decision-card {
   background: #fff;

@@ -468,6 +468,232 @@ export async function generateDecisionsFromSynthesis(data: {
   return arr;
 }
 
+// ── Problem Analysis ──────────────────────────────────────────────────────────
+
+interface RawProblem {
+  title?: string;
+  description?: string;
+  severity?: string;
+  affectedRoles?: string[];
+  frequency?: string;
+  evidenceQuotes?: string[];
+  parentId?: string;
+}
+
+interface RawProblemsResult {
+  rootProblem?: string;
+  problems?: RawProblem[];
+}
+
+const PROBLEMS_PROMPT = (painPoints: string[], quotes: string[], themes: string[]) =>
+  `You are a senior UX researcher. Identify core product problems from these research findings.
+
+Return ONLY a valid JSON object:
+{
+  "rootProblem": "One sentence systemic root cause underlying all specific problems",
+  "problems": [
+    {
+      "title": "Problem title (5-8 words)",
+      "description": "2-3 sentence description of the problem and its impact",
+      "severity": "critical",
+      "affectedRoles": ["researcher", "pm", "designer", "developer", "project_manager"],
+      "frequency": "daily",
+      "evidenceQuotes": ["direct quote supporting this problem"],
+      "parentId": ""
+    }
+  ]
+}
+
+Rules:
+- Generate 3-5 problems maximum
+- severity: "critical" (blocks core workflow) | "moderate" (significant friction) | "minor" (nice to fix)
+- affectedRoles: include only roles genuinely impacted
+- frequency: "daily" | "per_sprint" | "occasional"
+- parentId: if a problem is a sub-problem, set to the parent problem's title; otherwise leave empty
+- evidenceQuotes: 1-2 direct quotes from research
+
+Pain Points:\n${painPoints.slice(0, 8).join('\n')}
+Key Quotes:\n${quotes.slice(0, 6).join('\n')}
+Themes: ${themes.join(', ')}`;
+
+function mockGenerateProblems(painPoints: string[], quotes: string[]): RawProblemsResult {
+  return {
+    rootProblem: 'Teams lack a unified research-to-decision pipeline, causing insights to be lost between research, design, and development handoffs.',
+    problems: [
+      { title: 'Research insights fail to reach decision-makers', description: 'Research findings exist but never surface when decisions are being made. Teams proceed without evidence that already exists.', severity: 'critical', affectedRoles: ['researcher', 'pm'], frequency: 'per_sprint', evidenceQuotes: [painPoints[0] ?? ''].filter(Boolean), parentId: '' },
+      { title: 'Tool fragmentation breaks daily focus', description: 'Users context-switch between 10+ tools daily, spending more time managing tools than doing actual work.', severity: 'critical', affectedRoles: ['researcher', 'designer', 'pm'], frequency: 'daily', evidenceQuotes: [quotes[0] ?? ''].filter(Boolean), parentId: '' },
+      { title: 'No single source of truth causes misalignment', description: 'Research, specs, and decisions live in different tools with no sync. Teams discover misalignment at launch — too late to fix cheaply.', severity: 'critical', affectedRoles: ['pm', 'designer', 'developer', 'project_manager'], frequency: 'per_sprint', evidenceQuotes: [painPoints[1] ?? ''].filter(Boolean), parentId: '' },
+      { title: 'Research share-out takes 8x longer than necessary', description: 'Preparing findings for stakeholders takes 2 hours for a 15-minute task. Manual copying degrades quality and discourages sharing.', severity: 'moderate', affectedRoles: ['researcher'], frequency: 'per_sprint', evidenceQuotes: [quotes[1] ?? ''].filter(Boolean), parentId: 'Research insights fail to reach decision-makers' }
+    ]
+  };
+}
+
+export async function generateProblems(data: {
+  painPoints: string[];
+  keyQuotes: string[];
+  mainThemes: string[];
+}): Promise<RawProblemsResult> {
+  if (!process.env.GROQ_API_KEY) {
+    await new Promise(r => setTimeout(r, 1200));
+    return mockGenerateProblems(data.painPoints, data.keyQuotes);
+  }
+
+  console.log('[groq] generating problem analysis...');
+  const res = await groqFetch({
+    model: 'llama-3.1-8b-instant',
+    messages: [{ role: 'user', content: PROBLEMS_PROMPT(data.painPoints, data.keyQuotes, data.mainThemes) }],
+    temperature: 0.3,
+    response_format: { type: 'json_object' }
+  });
+
+  if (!res.ok) throw new Error(`Groq problems ${res.status}: ${await res.text()}`);
+  const responseData = await res.json() as { choices: Array<{ message: { content: string } }> };
+  const content = responseData.choices[0]?.message?.content;
+  if (!content) throw new Error('No content in response');
+  console.log('[groq] problem analysis complete');
+  return JSON.parse(content) as RawProblemsResult;
+}
+
+// ── Role Briefing ─────────────────────────────────────────────────────────────
+
+interface RawBriefing {
+  confidence?: string;
+  pm?: {
+    objectives?: string[];
+    okrs?: Array<{ objective: string; keyResults: string[] }>;
+    priorityStackRank?: string[];
+    assumptionsAndRisks?: string[];
+    methodsAndTools?: string[];
+  };
+  designer?: {
+    userNeeds?: string[];
+    jobsToBeDone?: string[];
+    designPrinciples?: string[];
+    deliverables?: string[];
+    successCriteria?: string[];
+  };
+  developer?: {
+    deliverables?: string[];
+    acceptanceCriteria?: string[];
+    technicalConstraints?: string[];
+    dependencies?: string[];
+    nonGoals?: string[];
+  };
+  projectManager?: {
+    deliverables?: string[];
+    milestones?: string[];
+    dependenciesMap?: string[];
+    effortEstimates?: string[];
+    openQuestions?: string[];
+  };
+}
+
+const BRIEFING_PROMPT = (rootProblem: string, problems: string, painPoints: string[], themes: string[], decisions: string[]) =>
+  `You are a senior product strategist. Generate role-specific strategic outputs from UX research findings.
+
+Return ONLY a valid JSON object with these exact keys:
+{
+  "confidence": "high|medium|low",
+  "pm": {
+    "objectives": ["qualitative action-oriented objective"],
+    "okrs": [{"objective": "...", "keyResults": ["Increase X from A to B"]}],
+    "priorityStackRank": ["#1: reason"],
+    "assumptionsAndRisks": ["assumption or risk"],
+    "methodsAndTools": ["how to measure a specific KR"]
+  },
+  "designer": {
+    "userNeeds": ["Users need to be able to..."],
+    "jobsToBeDone": ["When [situation], I want to [motivation], so I can [outcome]"],
+    "designPrinciples": ["design constraint or guardrail"],
+    "deliverables": ["specific design deliverable"],
+    "successCriteria": ["measurable design success criterion"]
+  },
+  "developer": {
+    "deliverables": ["specific technical deliverable"],
+    "acceptanceCriteria": ["Feature X: user can do Y in < Z steps"],
+    "technicalConstraints": ["system constraint"],
+    "dependencies": ["external dependency"],
+    "nonGoals": ["explicitly NOT building this"]
+  },
+  "projectManager": {
+    "deliverables": ["deliverable item"],
+    "milestones": ["Phase N (Week X-Y): description"],
+    "dependenciesMap": ["A must complete before B"],
+    "effortEstimates": ["Feature X: S/M/L/XL (~timeframe)"],
+    "openQuestions": ["unresolved question blocking execution"]
+  }
+}
+
+Root Problem: ${rootProblem}
+Problems:\n${problems}
+Pain Points:\n${painPoints.slice(0, 6).join('\n')}
+Themes: ${themes.join(', ')}
+Decisions:\n${decisions.slice(0, 5).join('\n')}`;
+
+function mockGenerateBriefing(rootProblem: string, interviewCount: number): RawBriefing {
+  return {
+    confidence: interviewCount >= 5 ? 'high' : interviewCount >= 2 ? 'medium' : 'low',
+    pm: {
+      objectives: ['Eliminate research-to-decision lag so teams act on evidence within 48 hours', 'Reduce tool fragmentation overhead to free 30% more time for actual product thinking'],
+      okrs: [{ objective: 'Make research immediately actionable', keyResults: ['Reduce research-to-decision time from 2 weeks to 48 hours', 'Increase research utilization to 70% per sprint', 'Cut share-out prep from 2 hours to 15 minutes'] }],
+      priorityStackRank: ['#1: Unified workspace — highest frequency, affects all roles', '#2: Automated share-out — directly recoverable time', '#3: Research traceability — reduces rework at handoff'],
+      assumptionsAndRisks: ['Assumption: teams adopt tools that reduce switching, not add to it', 'Risk: AI summaries may not meet researcher accuracy standards', 'Risk: PMs may not change habits without a forcing function'],
+      methodsAndTools: ['Track research-to-decision time via timestamp delta in Decisions Hub', 'Measure share-out prep via monthly user survey', 'Monitor research utilization via sourceInsightId count per sprint']
+    },
+    designer: {
+      userNeeds: ['Users need to find relevant research without leaving their design tool', 'Users need to trace every design decision to a user need', 'Users need to share findings in a format stakeholders will read'],
+      jobsToBeDone: ['When starting a sprint, I want all relevant research in one place, so I can design without hunting 5 tools', 'When presenting work, I want to share a single link, so I can stop building slide decks manually'],
+      designPrinciples: ['Zero context-switching: research accessible without leaving the design canvas', 'Evidence-first: every decision traceable to a user quote', 'Progressive disclosure: show minimum, reveal depth on demand'],
+      deliverables: ['Unified research panel for design tools', 'Stakeholder briefing auto-generated from synthesis', 'Design decision log with evidence links'],
+      successCriteria: ['Designers cite evidence in 80% of critiques without prompting', 'Stakeholder prep time under 20 minutes', 'Zero "where does this come from?" questions in review']
+    },
+    developer: {
+      deliverables: ['Transcript ingestion + AI analysis API', 'Cross-interview synthesis engine', 'Research evidence traceability system', 'Role-based briefing generator endpoint'],
+      acceptanceCriteria: ['Transcript API: processes 10k words in under 30 seconds', 'Synthesis: pattern detection across 3+ interviews', 'Traceability: every Decision stores sourceInsightId', 'Briefing: complete role outputs in under 20 seconds'],
+      technicalConstraints: ['Must not change researcher recording workflow', 'Handles transcripts 500–20,000 words', 'All data stays within the organization'],
+      dependencies: ['AI provider API for analysis', 'Auth system before multi-user features', 'Persistent storage to replace in-memory store'],
+      nonGoals: ['NOT real-time collaborative editing this phase', 'NOT Jira/Linear integration in MVP', 'NOT custom AI model — using LLMs via API']
+    },
+    projectManager: {
+      deliverables: ['Upload + AI analysis pipeline', 'Insights validation workspace', 'Cross-interview synthesis', 'Decisions Hub', 'Role briefing generator', 'Deploy with auth + persistence'],
+      milestones: ['Phase 1 (Week 1-2): Core AI pipeline', 'Phase 2 (Week 3-4): Synthesis + Decisions', 'Phase 3 (Week 5-6): Problem analysis + Briefing', 'Phase 4 (Week 7-8): Auth + deploy'],
+      dependenciesMap: ['Upload must complete before Insights', 'Insights before Synthesis', 'Synthesis feeds Decisions', 'Problems must exist before Briefing'],
+      effortEstimates: ['Upload + analysis: M (1-2 weeks)', 'Insights UI: S (3-5 days)', 'Synthesis: L (2-3 weeks)', 'Briefing: L (2-3 weeks)', 'Auth + storage: XL (3-4 weeks)'],
+      openQuestions: ['Who owns research data — individual or team account?', 'What happens to decisions when transcripts are updated?', 'Do we need role-based access before first enterprise customer?']
+    }
+  };
+}
+
+export async function generateBriefing(data: {
+  rootProblem: string;
+  problems: Array<{ title: string; description: string }>;
+  painPoints: string[];
+  mainThemes: string[];
+  decisionTitles: string[];
+  interviewCount: number;
+}): Promise<RawBriefing> {
+  if (!process.env.GROQ_API_KEY) {
+    await new Promise(r => setTimeout(r, 1500));
+    return mockGenerateBriefing(data.rootProblem, data.interviewCount);
+  }
+
+  const problemsStr = data.problems.map(p => `- ${p.title}: ${p.description}`).join('\n');
+  console.log('[groq] generating role briefing...');
+  const res = await groqFetch({
+    model: 'llama-3.1-8b-instant',
+    messages: [{ role: 'user', content: BRIEFING_PROMPT(data.rootProblem, problemsStr, data.painPoints, data.mainThemes, data.decisionTitles) }],
+    temperature: 0.3,
+    response_format: { type: 'json_object' }
+  }, 90000);
+
+  if (!res.ok) throw new Error(`Groq briefing ${res.status}: ${await res.text()}`);
+  const responseData = await res.json() as { choices: Array<{ message: { content: string } }> };
+  const content = responseData.choices[0]?.message?.content;
+  if (!content) throw new Error('No content in briefing response');
+  console.log('[groq] briefing complete');
+  return JSON.parse(content) as RawBriefing;
+}
+
 // ── Public API ────────────────────────────────────────────────────────────────
 
 export async function analyzeTranscript(transcript: string, interviewId: string): Promise<AIResult> {

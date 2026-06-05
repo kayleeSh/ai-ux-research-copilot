@@ -68,6 +68,67 @@ export interface Report {
   clusters: Cluster[];
 }
 
+export interface Problem {
+  id: string;
+  title: string;
+  description: string;
+  severity: 'critical' | 'moderate' | 'minor';
+  affectedRoles: string[];
+  frequency: 'daily' | 'per_sprint' | 'occasional';
+  evidenceQuotes: string[];
+  parentId: string;
+  createdAt: string;
+}
+
+export interface ProblemsAnalysis {
+  id: string;
+  rootProblem: string;
+  problems: Problem[];
+  interviewCount: number;
+  generatedAt: string;
+}
+
+export interface OKR {
+  objective: string;
+  keyResults: string[];
+}
+
+export interface Briefing {
+  id: string;
+  confidence: 'high' | 'medium' | 'low';
+  problemCount: number;
+  interviewCount: number;
+  pm: {
+    objectives: string[];
+    okrs: OKR[];
+    priorityStackRank: string[];
+    assumptionsAndRisks: string[];
+    methodsAndTools: string[];
+  };
+  designer: {
+    userNeeds: string[];
+    jobsToBeDone: string[];
+    designPrinciples: string[];
+    deliverables: string[];
+    successCriteria: string[];
+  };
+  developer: {
+    deliverables: string[];
+    acceptanceCriteria: string[];
+    technicalConstraints: string[];
+    dependencies: string[];
+    nonGoals: string[];
+  };
+  projectManager: {
+    deliverables: string[];
+    milestones: string[];
+    dependenciesMap: string[];
+    effortEstimates: string[];
+    openQuestions: string[];
+  };
+  generatedAt: string;
+}
+
 export interface Decision {
   id: string;
   title: string;
