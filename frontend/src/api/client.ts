@@ -155,24 +155,6 @@ export const api = {
   deleteDecision: (id: string) =>
     request<{ success: boolean }>(`/decisions/${id}`, { method: 'DELETE' }),
 
-  generateDecisions: (interviewIds: string[]) =>
-    request<Decision[]>('/decisions/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ interviewIds })
-    }),
-
-  generateDecisionsFromSynthesis: (data: {
-    recommendations: string[];
-    prioritizedPainPoints: string[];
-    commonThemes: string[];
-  }) =>
-    request<Decision[]>('/decisions/generate-from-synthesis', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    }),
-
   // ── Problems ──────────────────────────────────────────────────────────────
   getProblems: () => request<ProblemsAnalysis>('/problems'),
   generateProblems: () =>
