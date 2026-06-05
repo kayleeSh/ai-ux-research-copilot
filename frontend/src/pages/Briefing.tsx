@@ -276,6 +276,7 @@ export default function PlaybookPage() {
   const [generating, setGenerating]   = useState(false);
   const [error, setError]             = useState('');
   const [activeRole, setActiveRole]   = useState<Role>('pm');
+  const [confirmRegen, setConfirmRegen] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -361,9 +362,19 @@ export default function PlaybookPage() {
 
           <div className="sidebar-divider" />
           <div className="sidebar-group-label">Actions</div>
-          <button className="sidebar-nav-btn" onClick={handleGenerate} disabled={generating}>
-            <span>↻</span><span>{generating ? 'Generating…' : 'Regenerate'}</span>
-          </button>
+          {confirmRegen ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '4px 0' }}>
+              <span style={{ fontSize: '0.72rem', color: '#6b7280', padding: '0 8px' }}>Replace current playbook?</span>
+              <div style={{ display: 'flex', gap: 4 }}>
+                <button className="btn btn-danger btn-sm" style={{ flex: 1, fontSize: '0.72rem' }} onClick={() => { setConfirmRegen(false); handleGenerate(); }}>Yes, replace</button>
+                <button className="btn btn-ghost btn-sm" style={{ flex: 1, fontSize: '0.72rem' }} onClick={() => setConfirmRegen(false)}>Cancel</button>
+              </div>
+            </div>
+          ) : (
+            <button className="sidebar-nav-btn" onClick={() => briefing ? setConfirmRegen(true) : handleGenerate()} disabled={generating}>
+              <span>↻</span><span>{generating ? 'Generating…' : 'Regenerate'}</span>
+            </button>
+          )}
           <Link to="/problems" className="sidebar-nav-btn" style={{ textDecoration: 'none', color: '#6b7280' }}>
             <span>←</span><span>Problem Analysis</span>
           </Link>
@@ -383,9 +394,17 @@ export default function PlaybookPage() {
                 {activeRoleData.subtitle} · Click <strong>+ Log</strong> on any item to add it to your Decision Log
               </p>
             </div>
-            <button className="btn btn-ghost" onClick={handleGenerate} disabled={generating}>
-              {generating ? <><span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} /> Generating…</> : '↻ Regenerate'}
-            </button>
+            {confirmRegen ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8, padding: '6px 12px' }}>
+                <span style={{ fontSize: '0.78rem', color: '#92400e' }}>Replace current playbook?</span>
+                <button className="btn btn-danger btn-sm" onClick={() => { setConfirmRegen(false); handleGenerate(); }}>Yes</button>
+                <button className="btn btn-ghost btn-sm" onClick={() => setConfirmRegen(false)}>Cancel</button>
+              </div>
+            ) : (
+              <button className="btn btn-ghost" onClick={() => briefing ? setConfirmRegen(true) : handleGenerate()} disabled={generating}>
+                {generating ? <><span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} /> Generating…</> : '↻ Regenerate'}
+              </button>
+            )}
           </div>
 
           {error && <div className="error-msg">{error}</div>}

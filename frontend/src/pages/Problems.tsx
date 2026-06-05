@@ -249,6 +249,7 @@ export default function Problems() {
   const [viewMode, setViewMode]   = useState<ViewMode>('hierarchy');
   const [severityFilter, setSeverityFilter] = useState<string>('all');
   const [roleFilter, setRoleFilter]         = useState<string>('all');
+  const [confirmRegen, setConfirmRegen]     = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -362,9 +363,19 @@ export default function Problems() {
 
           <div className="sidebar-divider" />
           <div className="sidebar-group-label">Actions</div>
-          <button className="sidebar-nav-btn" onClick={handleGenerate} disabled={generating}>
-            <span>↻</span><span>{generating ? 'Generating…' : 'Regenerate'}</span>
-          </button>
+          {confirmRegen ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '4px 0' }}>
+              <span style={{ fontSize: '0.72rem', color: '#6b7280', padding: '0 8px' }}>Replace current analysis?</span>
+              <div style={{ display: 'flex', gap: 4 }}>
+                <button className="btn btn-danger btn-sm" style={{ flex: 1, fontSize: '0.72rem' }} onClick={() => { setConfirmRegen(false); handleGenerate(); }}>Yes, replace</button>
+                <button className="btn btn-ghost btn-sm" style={{ flex: 1, fontSize: '0.72rem' }} onClick={() => setConfirmRegen(false)}>Cancel</button>
+              </div>
+            </div>
+          ) : (
+            <button className="sidebar-nav-btn" onClick={() => analysis ? setConfirmRegen(true) : handleGenerate()} disabled={generating}>
+              <span>↻</span><span>{generating ? 'Generating…' : 'Regenerate'}</span>
+            </button>
+          )}
           <Link to="/playbook" className="sidebar-nav-btn" style={{ textDecoration: 'none', color: '#4f46e5', fontWeight: 600 }}>
             <span>→</span><span>View Playbook</span>
           </Link>
@@ -379,10 +390,18 @@ export default function Problems() {
                 Synthesized problems from your research — the foundation for role-specific briefings
               </p>
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button className="btn btn-ghost" onClick={handleGenerate} disabled={generating}>
-                {generating ? <><span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} /> Generating…</> : '↻ Regenerate'}
-              </button>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              {confirmRegen ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8, padding: '6px 12px' }}>
+                  <span style={{ fontSize: '0.78rem', color: '#92400e' }}>Replace current analysis?</span>
+                  <button className="btn btn-danger btn-sm" onClick={() => { setConfirmRegen(false); handleGenerate(); }}>Yes</button>
+                  <button className="btn btn-ghost btn-sm" onClick={() => setConfirmRegen(false)}>Cancel</button>
+                </div>
+              ) : (
+                <button className="btn btn-ghost" onClick={() => analysis ? setConfirmRegen(true) : handleGenerate()} disabled={generating}>
+                  {generating ? <><span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} /> Generating…</> : '↻ Regenerate'}
+                </button>
+              )}
               <Link to="/playbook" className="btn btn-primary">View Playbook →</Link>
             </div>
           </div>
