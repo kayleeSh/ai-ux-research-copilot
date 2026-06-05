@@ -122,7 +122,7 @@ export interface Briefing {
 export interface Decision {
   id: string;
   title: string;
-  status: 'draft' | 'open' | 'in_progress' | 'decided' | 'rejected' | 'deferred' | 'archived';
+  status: 'under_discussion' | 'decided' | 'rejected' | 'deferred';
   priority: 'high' | 'medium' | 'low';
   note: string;
   owner: string;

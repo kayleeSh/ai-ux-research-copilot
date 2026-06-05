@@ -35,6 +35,37 @@ const ROLE_COLOR: Record<string, string> = {
 
 type ViewMode = 'hierarchy' | 'segment' | 'priority';
 
+// ── Log Decision Button ────────────────────────────────────────────────────────
+
+function LogProblemButton({ problem }: { problem: Problem }) {
+  const [logged, setLogged]   = useState(false);
+  const [logging, setLogging] = useState(false);
+  if (logged) return <span style={{ fontSize: '0.72rem', color: '#059669', fontWeight: 500 }}>✓ Logged to Decisions</span>;
+  return (
+    <button
+      disabled={logging}
+      onClick={async () => {
+        setLogging(true);
+        try {
+          await api.createDecision({
+            title:                problem.title.length > 120 ? problem.title.slice(0, 120) + '…' : problem.title,
+            status:               'under_discussion',
+            priority:             problem.severity === 'critical' ? 'high' : problem.severity === 'moderate' ? 'medium' : 'low',
+            note:                 problem.description,
+            evidenceQuotes:       problem.evidenceQuotes,
+            sourceType:           'ai_generated',
+            sourceInterviewTitle: problem.sourceInterviewTitles?.[0] ?? '',
+          });
+          setLogged(true);
+        } catch { setLogging(false); }
+      }}
+      style={{ background: 'none', border: '1px solid #e5e7eb', borderRadius: 6, padding: '3px 10px', fontSize: '0.72rem', cursor: 'pointer', color: '#6b7280', whiteSpace: 'nowrap', fontFamily: 'inherit' }}
+    >
+      {logging ? '…' : '+ Log Decision'}
+    </button>
+  );
+}
+
 // ── Problem Card ───────────────────────────────────────────────────────────────
 
 function ProblemCard({ problem, isChild = false }: { problem: Problem; isChild?: boolean }) {
@@ -121,6 +152,11 @@ function ProblemCard({ problem, isChild = false }: { problem: Problem; isChild?:
           )}
         </div>
       )}
+
+      {/* Log to Decision Log */}
+      <div style={{ marginTop: 10, display: 'flex', justifyContent: 'flex-end' }}>
+        <LogProblemButton problem={problem} />
+      </div>
     </div>
   );
 }
@@ -329,8 +365,8 @@ export default function Problems() {
           <button className="sidebar-nav-btn" onClick={handleGenerate} disabled={generating}>
             <span>↻</span><span>{generating ? 'Generating…' : 'Regenerate'}</span>
           </button>
-          <Link to="/briefing" className="sidebar-nav-btn" style={{ textDecoration: 'none', color: '#4f46e5', fontWeight: 600 }}>
-            <span>→</span><span>View Briefing</span>
+          <Link to="/playbook" className="sidebar-nav-btn" style={{ textDecoration: 'none', color: '#4f46e5', fontWeight: 600 }}>
+            <span>→</span><span>View Playbook</span>
           </Link>
         </aside>
 
@@ -347,7 +383,7 @@ export default function Problems() {
               <button className="btn btn-ghost" onClick={handleGenerate} disabled={generating}>
                 {generating ? <><span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} /> Generating…</> : '↻ Regenerate'}
               </button>
-              <Link to="/briefing" className="btn btn-primary">View Briefing →</Link>
+              <Link to="/playbook" className="btn btn-primary">View Playbook →</Link>
             </div>
           </div>
 
@@ -424,8 +460,8 @@ export default function Problems() {
                       Generate role-specific objectives, OKRs, deliverables, and more
                     </div>
                   </div>
-                  <Link to="/briefing" className="btn btn-primary" style={{ flexShrink: 0 }}>
-                    View Role Briefing →
+                  <Link to="/playbook" className="btn btn-primary" style={{ flexShrink: 0 }}>
+                    View Playbook →
                   </Link>
                 </div>
               </div>

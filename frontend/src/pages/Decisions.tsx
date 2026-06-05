@@ -1,38 +1,29 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client';
-import { Decision, Interview } from '../types';
+import { Decision } from '../types';
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
 const STATUS_LABEL: Record<Decision['status'], string> = {
-  draft:       'Draft',
-  open:        'Open',
-  in_progress: 'In Progress',
-  decided:     'Decided',
-  rejected:    'Rejected',
-  deferred:    'Deferred',
-  archived:    'Archived',
+  under_discussion: 'Under Discussion',
+  decided:          'Decided',
+  rejected:         'Rejected',
+  deferred:         'Deferred',
 };
 
 const STATUS_BORDER: Record<Decision['status'], string> = {
-  draft:       '#d1d5db',
-  open:        '#f59e0b',
-  in_progress: '#3b82f6',
-  decided:     '#059669',
-  rejected:    '#dc2626',
-  deferred:    '#8b5cf6',
-  archived:    '#9ca3af',
+  under_discussion: '#f59e0b',
+  decided:          '#059669',
+  rejected:         '#dc2626',
+  deferred:         '#8b5cf6',
 };
 
 const STATUS_STYLE: Record<Decision['status'], React.CSSProperties> = {
-  draft:       { background: '#f3f4f6', color: '#6b7280' },
-  open:        { background: '#fffbeb', color: '#b45309' },
-  in_progress: { background: '#eff6ff', color: '#1d4ed8' },
-  decided:     { background: '#f0fdf4', color: '#166534' },
-  rejected:    { background: '#fef2f2', color: '#991b1b' },
-  deferred:    { background: '#f5f3ff', color: '#6d28d9' },
-  archived:    { background: '#f3f4f6', color: '#9ca3af' },
+  under_discussion: { background: '#fffbeb', color: '#b45309' },
+  decided:          { background: '#f0fdf4', color: '#166534' },
+  rejected:         { background: '#fef2f2', color: '#991b1b' },
+  deferred:         { background: '#f5f3ff', color: '#6d28d9' },
 };
 
 const PRIORITY_TAG: Record<Decision['priority'], string> = {
@@ -41,102 +32,22 @@ const PRIORITY_TAG: Record<Decision['priority'], string> = {
   low:    'tag-gray',
 };
 
-const SIDEBAR_ITEMS: { id: string; label: string; icon: string }[] = [
-  { id: 'all',         label: 'All Decisions', icon: '📋' },
-  { id: 'open',        label: 'Open',          icon: '🔴' },
-  { id: 'in_progress', label: 'In Progress',   icon: '🔵' },
-  { id: 'decided',     label: 'Decided',       icon: '🟢' },
-  { id: 'deferred',    label: 'Deferred',      icon: '🟣' },
-  { id: 'rejected',    label: 'Rejected',      icon: '⚫' },
-  { id: 'draft',       label: 'Draft',         icon: '📝' },
-  { id: 'archived',    label: 'Archived',      icon: '🗃' },
+const SIDEBAR_FILTERS: { id: string; label: string; icon: string }[] = [
+  { id: 'all',              label: 'All Decisions',    icon: '📋' },
+  { id: 'under_discussion', label: 'Under Discussion', icon: '💬' },
+  { id: 'decided',          label: 'Decided',          icon: '🟢' },
+  { id: 'deferred',         label: 'Deferred',         icon: '🟣' },
+  { id: 'rejected',         label: 'Rejected',         icon: '⚫' },
 ];
 
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 1)   return 'just now';
-  if (mins < 60)  return `${mins}m ago`;
+  if (mins < 1)  return 'just now';
+  if (mins < 60) return `${mins}m ago`;
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24)   return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  return `${days}d ago`;
-}
-
-// ── Generate Modal ─────────────────────────────────────────────────────────────
-
-function GenerateModal({
-  interviews, onClose, onGenerated,
-}: {
-  interviews: Interview[];
-  onClose: () => void;
-  onGenerated: (d: Decision[]) => void;
-}) {
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [running, setRunning]   = useState(false);
-  const [error, setError]       = useState('');
-
-  const toggle = (id: string) => setSelected(prev => {
-    const next = new Set(prev);
-    next.has(id) ? next.delete(id) : next.add(id);
-    return next;
-  });
-
-  const handleGenerate = async () => {
-    if (selected.size === 0) return;
-    setRunning(true); setError('');
-    try {
-      const result = await api.generateDecisions(Array.from(selected));
-      onGenerated(result);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Generation failed');
-      setRunning(false);
-    }
-  };
-
-  return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
-      onClick={running ? undefined : onClose}>
-      <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 520, boxShadow: '0 20px 60px rgba(0,0,0,0.18)', padding: '28px 32px', maxHeight: '85vh', overflowY: 'auto' }}
-        onClick={e => e.stopPropagation()}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
-          <div>
-            <h2 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Generate Decisions from Research</h2>
-            <p style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: 3 }}>AI will analyze your research and create actionable decision drafts</p>
-          </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#9ca3af', padding: 4, lineHeight: 1 }}>✕</button>
-        </div>
-        {error && <div className="error-msg">{error}</div>}
-        <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#4b5563', marginBottom: 10 }}>Select Interviews</div>
-        {interviews.length === 0 ? (
-          <div className="empty-state" style={{ padding: '24px 0' }}>
-            <p>No analyzed interviews found.</p>
-            <Link to="/upload" className="btn btn-primary btn-sm" style={{ marginTop: 8 }}>Go to Research Hub</Link>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
-            {interviews.map(iv => (
-              <label key={iv.id} className={`interview-checkbox ${selected.has(iv.id) ? 'selected' : ''}`}>
-                <input type="checkbox" checked={selected.has(iv.id)} onChange={() => toggle(iv.id)} style={{ accentColor: '#4f46e5' }} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 500, fontSize: '0.875rem' }}>{iv.title}</div>
-                  <div style={{ fontSize: '0.72rem', color: '#9ca3af', marginTop: 2 }}>
-                    {iv.aiResult?.mainThemes?.length ?? 0} themes · {iv.aiResult?.painPoints?.length ?? 0} pain points
-                  </div>
-                </div>
-              </label>
-            ))}
-          </div>
-        )}
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          <button className="btn btn-primary" onClick={handleGenerate} disabled={selected.size === 0 || running}>
-            {running ? <><span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} /> Generating…</> : `✨ Generate from ${selected.size > 0 ? selected.size : ''} Interview${selected.size !== 1 ? 's' : ''} →`}
-          </button>
-          <button className="btn btn-ghost" onClick={onClose} disabled={running}>Cancel</button>
-        </div>
-      </div>
-    </div>
-  );
+  if (hrs < 24)  return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
 }
 
 // ── New Decision Modal ─────────────────────────────────────────────────────────
@@ -152,7 +63,7 @@ function NewDecisionModal({ onClose, onCreated }: { onClose: () => void; onCreat
     if (!title.trim()) { setError('Title is required'); return; }
     setSaving(true);
     try {
-      const d = await api.createDecision({ title, priority, note, status: 'open', sourceType: 'manual' });
+      const d = await api.createDecision({ title, priority, note, status: 'under_discussion', sourceType: 'manual' });
       onCreated(d);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to create');
@@ -171,7 +82,7 @@ function NewDecisionModal({ onClose, onCreated }: { onClose: () => void; onCreat
         </div>
         {error && <div className="error-msg">{error}</div>}
         <div className="form-group">
-          <label>Decision Title *</label>
+          <label>Decision *</label>
           <input type="text" placeholder="e.g. Redesign onboarding to reduce context switching" value={title} onChange={e => setTitle(e.target.value)} autoFocus />
         </div>
         <div className="form-group">
@@ -184,7 +95,7 @@ function NewDecisionModal({ onClose, onCreated }: { onClose: () => void; onCreat
           </select>
         </div>
         <div className="form-group">
-          <label>Context / Rationale</label>
+          <label>Rationale</label>
           <textarea placeholder="What research finding led to this decision?" value={note} onChange={e => setNote(e.target.value)} style={{ minHeight: '90px' }} />
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
@@ -234,7 +145,7 @@ function DecisionCard({
     : null;
 
   return (
-    <div className="decision-card" style={{ borderLeftColor: STATUS_BORDER[decision.status], opacity: ['rejected', 'archived'].includes(decision.status) ? 0.65 : 1 }}>
+    <div className="decision-card" style={{ borderLeftColor: STATUS_BORDER[decision.status], opacity: decision.status === 'rejected' ? 0.65 : 1 }}>
 
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8, gap: 12 }}>
@@ -253,15 +164,12 @@ function DecisionCard({
         </div>
       </div>
 
-      {/* Source context */}
+      {/* Source */}
       {decision.sourceInterviewTitle && (
         <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
           <span>From:</span>
           {decision.sourceInterviewId ? (
-            <Link
-              to={`/workspace/${decision.sourceInterviewId}`}
-              style={{ color: '#4f46e5', textDecoration: 'none', fontWeight: 500 }}
-            >
+            <Link to={`/workspace/${decision.sourceInterviewId}`} style={{ color: '#4f46e5', textDecoration: 'none', fontWeight: 500 }}>
               {decision.sourceInterviewTitle} →
             </Link>
           ) : (
@@ -298,9 +206,7 @@ function DecisionCard({
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
                   <div className="report-quote" style={{ fontSize: '0.8rem', padding: '6px 12px', flex: 1 }}>{q}</div>
                   {decision.sourceInterviewId && (
-                    <Link to={`/workspace/${decision.sourceInterviewId}`} className="btn btn-ghost btn-sm" style={{ flexShrink: 0, fontSize: '0.72rem' }}>
-                      View →
-                    </Link>
+                    <Link to={`/workspace/${decision.sourceInterviewId}`} className="btn btn-ghost btn-sm" style={{ flexShrink: 0, fontSize: '0.72rem' }}>View →</Link>
                   )}
                 </div>
               ))}
@@ -309,7 +215,7 @@ function DecisionCard({
         </div>
       )}
 
-      {/* Owner · Due · Priority (edit mode) */}
+      {/* Owner · Due */}
       <div style={{ display: 'flex', gap: 16, marginBottom: 10, flexWrap: 'wrap', alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <span style={{ fontSize: '0.7rem', color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Owner</span>
@@ -352,31 +258,25 @@ function DecisionCard({
         </div>
       ) : (
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-          {decision.status === 'draft' && <button className="btn btn-ghost btn-sm" onClick={() => setStatus('open')}>→ Open</button>}
-          {['open', 'in_progress'].includes(decision.status) && (
+          {decision.status === 'under_discussion' && (
             <>
               <button className="btn btn-success btn-sm" onClick={() => setStatus('decided')}>✓ Decide</button>
               <button className="btn btn-warning btn-sm" onClick={() => setStatus('deferred')}>⏸ Defer</button>
               <button className="btn btn-danger btn-sm" onClick={() => setStatus('rejected')}>✗ Reject</button>
             </>
           )}
-          {decision.status === 'open' && <button className="btn btn-secondary btn-sm" onClick={() => setStatus('in_progress')}>→ In Progress</button>}
-          {['decided', 'rejected'].includes(decision.status) && <button className="btn btn-ghost btn-sm" onClick={() => setStatus('open')}>↺ Reopen</button>}
           {decision.status === 'deferred' && (
             <>
               <button className="btn btn-success btn-sm" onClick={() => setStatus('decided')}>✓ Decide</button>
-              <button className="btn btn-ghost btn-sm" onClick={() => setStatus('open')}>↺ Reopen</button>
+              <button className="btn btn-ghost btn-sm" onClick={() => setStatus('under_discussion')}>↺ Reopen</button>
             </>
           )}
-          {['decided', 'rejected', 'deferred'].includes(decision.status) && (
-            <button className="btn btn-ghost btn-sm" style={{ color: '#9ca3af' }} onClick={() => setStatus('archived')}>🗃 Archive</button>
+          {['decided', 'rejected'].includes(decision.status) && (
+            <button className="btn btn-ghost btn-sm" onClick={() => setStatus('under_discussion')}>↺ Reopen</button>
           )}
-          {decision.status === 'archived' && <button className="btn btn-ghost btn-sm" onClick={() => setStatus('open')}>↺ Restore</button>}
-
-          {/* Status history timestamp */}
           {lastChange && (
             <span style={{ fontSize: '0.72rem', color: '#9ca3af', marginLeft: 'auto' }}>
-              {STATUS_LABEL[lastChange.status as Decision['status']]} · {timeAgo(lastChange.changedAt)}
+              {STATUS_LABEL[lastChange.status as Decision['status']] ?? lastChange.status} · {timeAgo(lastChange.changedAt)}
             </span>
           )}
         </div>
@@ -387,18 +287,15 @@ function DecisionCard({
 
 // ── Main Page ──────────────────────────────────────────────────────────────────
 
-export default function Decisions() {
+export default function DecisionsPage() {
   const [decisions, setDecisions]       = useState<Decision[]>([]);
-  const [interviews, setInterviews]     = useState<Interview[]>([]);
   const [loading, setLoading]           = useState(true);
   const [activeFilter, setActiveFilter] = useState('all');
-  const [showGenerate, setShowGenerate] = useState(false);
   const [showNew, setShowNew]           = useState(false);
 
   const load = useCallback(async () => {
-    const [d, iv] = await Promise.all([api.getDecisions(), api.getInterviews()]);
+    const d = await api.getDecisions();
     setDecisions(d);
-    setInterviews(iv.filter(i => !!i.aiResult));
     setLoading(false);
   }, []);
 
@@ -414,30 +311,16 @@ export default function Decisions() {
     setDecisions(prev => prev.filter(d => d.id !== id));
   };
 
-  const handleGenerated = (newDecisions: Decision[]) => {
-    setDecisions(prev => [...newDecisions, ...prev]);
-    setShowGenerate(false);
-  };
-
   const handleCreated = (decision: Decision) => {
     setDecisions(prev => [decision, ...prev]);
     setShowNew(false);
   };
 
-  // Stats
-  const total    = decisions.length;
-  const open     = decisions.filter(d => d.status === 'open').length;
-  const inProg   = decisions.filter(d => d.status === 'in_progress').length;
-  const decided  = decisions.filter(d => d.status === 'decided').length;
-  const deferred = decisions.filter(d => d.status === 'deferred').length;
-
-  // Insight coverage: insights that have a corresponding decision
-  const totalInsights   = interviews.reduce((sum, iv) => {
-    if (!iv.aiResult) return sum;
-    return sum + iv.aiResult.painPoints.length + iv.aiResult.mainThemes.length + iv.aiResult.keyQuotes.length;
-  }, 0);
-  const coveredInsights = new Set(decisions.map(d => d.sourceInsightId).filter(Boolean)).size;
-  const coveragePct     = totalInsights > 0 ? Math.round((coveredInsights / totalInsights) * 100) : 0;
+  const total      = decisions.length;
+  const discussing = decisions.filter(d => d.status === 'under_discussion').length;
+  const decided    = decisions.filter(d => d.status === 'decided').length;
+  const deferred   = decisions.filter(d => d.status === 'deferred').length;
+  const rejected   = decisions.filter(d => d.status === 'rejected').length;
 
   const countFor = (f: string) =>
     f === 'all' ? total : decisions.filter(d => d.status === f).length;
@@ -456,14 +339,13 @@ export default function Decisions() {
       {/* Stats bar */}
       <div className="synthesis-stats-bar">
         {[
-          { label: 'Total',            value: total,         icon: '📋', color: '#4f46e5' },
-          { label: 'Open',             value: open,          icon: '🔴', color: '#d97706' },
-          { label: 'In Progress',      value: inProg,        icon: '🔵', color: '#2563eb' },
-          { label: 'Decided',          value: decided,       icon: '🟢', color: '#059669' },
-          { label: 'Deferred',         value: deferred,      icon: '🟣', color: '#7c3aed' },
-          { label: 'Insight Coverage', value: `${coveragePct}%`, icon: '🎯', color: '#0891b2' },
+          { label: 'Total',            value: total,      icon: '📋', color: '#4f46e5' },
+          { label: 'Under Discussion', value: discussing, icon: '💬', color: '#d97706' },
+          { label: 'Decided',          value: decided,    icon: '🟢', color: '#059669' },
+          { label: 'Deferred',         value: deferred,   icon: '🟣', color: '#7c3aed' },
+          { label: 'Rejected',         value: rejected,   icon: '⚫', color: '#6b7280' },
         ].map((s, i) => (
-          <div key={i} className="stat-card" title={s.label === 'Insight Coverage' ? `${coveredInsights} of ${totalInsights} insights have decisions` : undefined}>
+          <div key={i} className="stat-card">
             <div className="stat-icon-wrap">{s.icon}</div>
             <div className="stat-value" style={{ color: s.color }}>{s.value}</div>
             <div className="stat-label">{s.label}</div>
@@ -475,8 +357,8 @@ export default function Decisions() {
 
         {/* Sidebar */}
         <aside className="synthesis-sidebar">
-          <div className="sidebar-group-label">Filter by Status</div>
-          {SIDEBAR_ITEMS.map(item => {
+          <div className="sidebar-group-label">Filter</div>
+          {SIDEBAR_FILTERS.map(item => {
             const count = countFor(item.id);
             return (
               <button key={item.id}
@@ -497,13 +379,14 @@ export default function Decisions() {
           <button className="sidebar-nav-btn" onClick={() => setShowNew(true)}>
             <span>+</span><span>New Decision</span>
           </button>
+
           <div className="sidebar-divider" />
-          <div className="sidebar-group-label">Navigate</div>
-          <Link to="/insights" className="sidebar-nav-btn" style={{ textDecoration: 'none', color: '#6b7280' }}>
-            <span>◈</span><span>Insights</span>
+          <div className="sidebar-group-label">Log from</div>
+          <Link to="/problems" className="sidebar-nav-btn" style={{ textDecoration: 'none', color: '#6b7280' }}>
+            <span>🔍</span><span>Problems</span>
           </Link>
-          <Link to="/synthesis" className="sidebar-nav-btn" style={{ textDecoration: 'none', color: '#6b7280' }}>
-            <span>⚡</span><span>Synthesis</span>
+          <Link to="/playbook" className="sidebar-nav-btn" style={{ textDecoration: 'none', color: '#6b7280' }}>
+            <span>📖</span><span>Playbook</span>
           </Link>
         </aside>
 
@@ -511,26 +394,30 @@ export default function Decisions() {
         <main className="synthesis-main">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
             <div>
-              <h1 style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: 4 }}>Decisions Hub</h1>
+              <h1 style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: 4 }}>Decision Log</h1>
               <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>
-                Track product decisions driven by research — from insight to resolved action
+                Research-driven decisions — log from Problems or Playbook, then track to resolution
               </p>
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button className="btn btn-ghost" onClick={() => setShowGenerate(true)}>✨ Generate from Research</button>
-              <button className="btn btn-primary" onClick={() => setShowNew(true)}>+ New Decision</button>
-            </div>
+            <button className="btn btn-primary" onClick={() => setShowNew(true)}>+ New Decision</button>
           </div>
 
           {filtered.length === 0 ? (
             <div className="empty-state">
-              <h3>{activeFilter === 'all' ? 'No decisions yet' : `No ${STATUS_LABEL[activeFilter as Decision['status']]} decisions`}</h3>
-              <p>{activeFilter === 'all' ? 'Generate decisions from your research or create one manually' : 'Try a different filter'}</p>
-              {activeFilter === 'all' && (
-                <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 12 }}>
-                  <button className="btn btn-primary" onClick={() => setShowGenerate(true)}>✨ Generate from Research</button>
-                  <button className="btn btn-ghost" onClick={() => setShowNew(true)}>+ New Decision</button>
-                </div>
+              <h3>{activeFilter === 'all' ? 'No decisions logged yet' : `No ${STATUS_LABEL[activeFilter as Decision['status']]} decisions`}</h3>
+              {activeFilter === 'all' ? (
+                <>
+                  <p style={{ marginBottom: 16 }}>
+                    Browse <strong>Problems</strong> or <strong>Playbook</strong> to log decisions directly from research findings, or create one manually.
+                  </p>
+                  <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+                    <Link to="/problems" className="btn btn-ghost">🔍 View Problems</Link>
+                    <Link to="/playbook" className="btn btn-ghost">📖 View Playbook</Link>
+                    <button className="btn btn-primary" onClick={() => setShowNew(true)}>+ New Decision</button>
+                  </div>
+                </>
+              ) : (
+                <button className="btn btn-ghost btn-sm" style={{ marginTop: 8 }} onClick={() => setActiveFilter('all')}>Show All</button>
               )}
             </div>
           ) : (
@@ -540,11 +427,11 @@ export default function Decisions() {
               ))}
             </div>
           )}
+
           <div style={{ height: 80 }} />
         </main>
       </div>
 
-      {showGenerate && <GenerateModal interviews={interviews} onClose={() => setShowGenerate(false)} onGenerated={handleGenerated} />}
       {showNew && <NewDecisionModal onClose={() => setShowNew(false)} onCreated={handleCreated} />}
     </div>
   );

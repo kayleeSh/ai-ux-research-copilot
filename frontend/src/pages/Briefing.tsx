@@ -10,44 +10,58 @@ type Role = 'pm' | 'designer' | 'developer' | 'projectManager';
 const ROLES: { id: Role; label: string; icon: string; subtitle: string }[] = [
   { id: 'pm',             label: 'Product Manager', icon: '📊', subtitle: 'OKRs, objectives, priorities & risks' },
   { id: 'designer',       label: 'Designer',        icon: '🎨', subtitle: 'User needs, JTBD & deliverables' },
-  { id: 'developer',      label: 'Developer',       icon: '⚡', subtitle: 'Deliverables, constraints & non-goals' },
+  { id: 'developer',      label: 'Developer',       icon: '🛠️', subtitle: 'Deliverables, constraints & non-goals' },
   { id: 'projectManager', label: 'Project Manager', icon: '📋', subtitle: 'Milestones, dependencies & open questions' },
 ];
 
-const CONFIDENCE_STYLE: Record<Briefing['confidence'], { label: string; color: string; bg: string }> = {
-  high:   { label: 'High Confidence',   color: '#059669', bg: '#f0fdf4' },
-  medium: { label: 'Medium Confidence', color: '#d97706', bg: '#fffbeb' },
-  low:    { label: 'Low Confidence',    color: '#dc2626', bg: '#fef2f2' },
+const CONFIDENCE_STYLE: Record<Briefing['confidence'], { label: string; color: string; bg: string; hint: string }> = {
+  high:   { label: 'High Confidence',   color: '#059669', bg: '#f0fdf4', hint: '5+ interviews — findings are well-supported' },
+  medium: { label: 'Medium Confidence', color: '#d97706', bg: '#fffbeb', hint: 'Based on 2–4 interviews — add more for higher reliability' },
+  low:    { label: 'Low Confidence',    color: '#dc2626', bg: '#fef2f2', hint: 'Based on 1 interview — treat findings as directional only' },
 };
 
-// ── Section helpers ────────────────────────────────────────────────────────────
+// ── Shared helpers ─────────────────────────────────────────────────────────────
 
 function SectionCard({ title, icon, children }: { title: string; icon: string; children: React.ReactNode }) {
   return (
     <div className="briefing-section">
-      <div className="briefing-section-title">
-        <span>{icon}</span> {title}
-      </div>
+      <div className="briefing-section-title"><span>{icon}</span> {title}</div>
       {children}
     </div>
   );
 }
 
-function BulletList({ items, color = '#374151' }: { items: string[]; color?: string }) {
+function LogButton({ item, onLog }: { item: string; onLog: (item: string) => Promise<void> }) {
+  const [logged, setLogged]   = useState(false);
+  const [logging, setLogging] = useState(false);
+  if (logged) return <span style={{ fontSize: '0.68rem', color: '#059669', flexShrink: 0, fontWeight: 500 }}>✓ Logged</span>;
+  return (
+    <button
+      disabled={logging}
+      onClick={async () => { setLogging(true); await onLog(item); setLogged(true); }}
+      style={{ background: 'none', border: '1px solid #e5e7eb', borderRadius: 6, padding: '2px 8px', fontSize: '0.68rem', cursor: 'pointer', color: '#9ca3af', flexShrink: 0, whiteSpace: 'nowrap', fontFamily: 'inherit' }}
+    >
+      + Log
+    </button>
+  );
+}
+
+function BulletList({ items, color = '#374151', onLog }: { items: string[]; color?: string; onLog?: (item: string) => Promise<void> }) {
   if (items.length === 0) return <p style={{ fontSize: '0.85rem', color: '#9ca3af' }}>None specified.</p>;
   return (
     <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
       {items.map((item, i) => (
         <li key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: '0.875rem', color, lineHeight: 1.6 }}>
           <span style={{ color: '#d1d5db', flexShrink: 0, marginTop: 3 }}>›</span>
-          <span>{item}</span>
+          <span style={{ flex: 1 }}>{item}</span>
+          {onLog && <LogButton item={item} onLog={onLog} />}
         </li>
       ))}
     </ul>
   );
 }
 
-function NumberedList({ items }: { items: string[] }) {
+function NumberedList({ items, onLog }: { items: string[]; onLog?: (item: string) => Promise<void> }) {
   if (items.length === 0) return <p style={{ fontSize: '0.85rem', color: '#9ca3af' }}>None specified.</p>;
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -56,18 +70,20 @@ function NumberedList({ items }: { items: string[] }) {
           <span style={{ background: '#f3f4f6', color: '#6b7280', borderRadius: '50%', width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 700, flexShrink: 0 }}>
             {i + 1}
           </span>
-          <span>{item}</span>
+          <span style={{ flex: 1 }}>{item}</span>
+          {onLog && <LogButton item={item} onLog={onLog} />}
         </div>
       ))}
     </div>
   );
 }
 
-function OKRCard({ okr }: { okr: OKR }) {
+function OKRCard({ okr, onLog }: { okr: OKR; onLog?: (item: string) => Promise<void> }) {
   return (
     <div style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 10, padding: '14px 16px', marginBottom: 10 }}>
-      <div style={{ fontWeight: 600, fontSize: '0.875rem', color: '#111827', marginBottom: 10 }}>
-        🎯 {okr.objective}
+      <div style={{ fontWeight: 600, fontSize: '0.875rem', color: '#111827', marginBottom: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+        <span>🎯 {okr.objective}</span>
+        {onLog && <LogButton item={okr.objective} onLog={onLog} />}
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {okr.keyResults.map((kr, i) => (
@@ -91,26 +107,23 @@ function WarningTag({ text }: { text: string }) {
   );
 }
 
-// ── Role Tabs ──────────────────────────────────────────────────────────────────
+// ── Role Tab Content ───────────────────────────────────────────────────────────
 
-function PMTab({ data }: { data: Briefing['pm'] }) {
+function PMTab({ data, onLog }: { data: Briefing['pm']; onLog: (item: string) => Promise<void> }) {
   return (
     <>
       <SectionCard title="Objectives" icon="🎯">
-        <NumberedList items={data.objectives} />
+        <NumberedList items={data.objectives} onLog={onLog} />
       </SectionCard>
-
       <SectionCard title="OKRs — Objectives & Key Results" icon="📈">
         {data.okrs.length === 0
           ? <p style={{ fontSize: '0.85rem', color: '#9ca3af' }}>No OKRs generated.</p>
-          : data.okrs.map((okr, i) => <OKRCard key={i} okr={okr} />)
+          : data.okrs.map((okr, i) => <OKRCard key={i} okr={okr} onLog={onLog} />)
         }
       </SectionCard>
-
       <SectionCard title="Priority Stack Rank" icon="🔢">
-        <BulletList items={data.priorityStackRank} color="#1f2937" />
+        <BulletList items={data.priorityStackRank} color="#1f2937" onLog={onLog} />
       </SectionCard>
-
       <SectionCard title="Assumptions & Risks" icon="⚠️">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {data.assumptionsAndRisks.length === 0
@@ -119,7 +132,6 @@ function PMTab({ data }: { data: Briefing['pm'] }) {
           }
         </div>
       </SectionCard>
-
       <SectionCard title="Methods & Tools to Measure KRs" icon="🔬">
         <BulletList items={data.methodsAndTools} color="#374151" />
       </SectionCard>
@@ -127,7 +139,7 @@ function PMTab({ data }: { data: Briefing['pm'] }) {
   );
 }
 
-function DesignerTab({ data }: { data: Briefing['designer'] }) {
+function DesignerTab({ data, onLog }: { data: Briefing['designer']; onLog: (item: string) => Promise<void> }) {
   return (
     <>
       <SectionCard title="User Needs" icon="👤">
@@ -139,7 +151,6 @@ function DesignerTab({ data }: { data: Briefing['designer'] }) {
           ))}
         </div>
       </SectionCard>
-
       <SectionCard title="Jobs To Be Done" icon="💼">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {data.jobsToBeDone.map((jtbd, i) => (
@@ -149,7 +160,6 @@ function DesignerTab({ data }: { data: Briefing['designer'] }) {
           ))}
         </div>
       </SectionCard>
-
       <SectionCard title="Design Principles" icon="🧭">
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
           {data.designPrinciples.map((p, i) => (
@@ -159,11 +169,9 @@ function DesignerTab({ data }: { data: Briefing['designer'] }) {
           ))}
         </div>
       </SectionCard>
-
       <SectionCard title="Deliverables" icon="📦">
-        <NumberedList items={data.deliverables} />
+        <NumberedList items={data.deliverables} onLog={onLog} />
       </SectionCard>
-
       <SectionCard title="Success Criteria for Design" icon="✅">
         <BulletList items={data.successCriteria} color="#374151" />
       </SectionCard>
@@ -171,32 +179,29 @@ function DesignerTab({ data }: { data: Briefing['designer'] }) {
   );
 }
 
-function DeveloperTab({ data }: { data: Briefing['developer'] }) {
+function DeveloperTab({ data, onLog }: { data: Briefing['developer']; onLog: (item: string) => Promise<void> }) {
   return (
     <>
       <SectionCard title="Deliverables" icon="📦">
-        <NumberedList items={data.deliverables} />
+        <NumberedList items={data.deliverables} onLog={onLog} />
       </SectionCard>
-
       <SectionCard title="Acceptance Criteria" icon="✅">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {data.acceptanceCriteria.map((ac, i) => (
             <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: '0.875rem', color: '#374151', lineHeight: 1.5, padding: '8px 12px', background: '#f0fdf4', borderRadius: 8, border: '1px solid #bbf7d0' }}>
               <span style={{ color: '#059669', flexShrink: 0 }}>✓</span>
-              <span>{ac}</span>
+              <span style={{ flex: 1 }}>{ac}</span>
+              <LogButton item={ac} onLog={onLog} />
             </div>
           ))}
         </div>
       </SectionCard>
-
       <SectionCard title="Technical Constraints" icon="🔒">
         <BulletList items={data.technicalConstraints} color="#92400e" />
       </SectionCard>
-
       <SectionCard title="Dependencies" icon="🔗">
         <BulletList items={data.dependencies} color="#374151" />
       </SectionCard>
-
       <SectionCard title="Non-Goals / Out of Scope" icon="🚫">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {data.nonGoals.map((ng, i) => (
@@ -211,13 +216,12 @@ function DeveloperTab({ data }: { data: Briefing['developer'] }) {
   );
 }
 
-function ProjectManagerTab({ data }: { data: Briefing['projectManager'] }) {
+function ProjectManagerTab({ data, onLog }: { data: Briefing['projectManager']; onLog: (item: string) => Promise<void> }) {
   return (
     <>
       <SectionCard title="Deliverables" icon="📦">
-        <NumberedList items={data.deliverables} />
+        <NumberedList items={data.deliverables} onLog={onLog} />
       </SectionCard>
-
       <SectionCard title="Milestones" icon="🏁">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {data.milestones.map((m, i) => (
@@ -225,12 +229,12 @@ function ProjectManagerTab({ data }: { data: Briefing['projectManager'] }) {
               <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#eef2ff', border: '2px solid #818cf8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 700, color: '#4f46e5', flexShrink: 0 }}>
                 {i + 1}
               </div>
-              <span style={{ paddingTop: 4 }}>{m}</span>
+              <span style={{ paddingTop: 4, flex: 1 }}>{m}</span>
+              <LogButton item={m} onLog={onLog} />
             </div>
           ))}
         </div>
       </SectionCard>
-
       <SectionCard title="Dependencies Map" icon="🔗">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {data.dependenciesMap.map((dep, i) => (
@@ -241,7 +245,6 @@ function ProjectManagerTab({ data }: { data: Briefing['projectManager'] }) {
           ))}
         </div>
       </SectionCard>
-
       <SectionCard title="Effort Estimates" icon="⏱️">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {data.effortEstimates.map((est, i) => (
@@ -252,7 +255,6 @@ function ProjectManagerTab({ data }: { data: Briefing['projectManager'] }) {
           ))}
         </div>
       </SectionCard>
-
       <SectionCard title="Open Questions" icon="❓">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {data.openQuestions.map((q, i) => (
@@ -268,18 +270,18 @@ function ProjectManagerTab({ data }: { data: Briefing['projectManager'] }) {
 
 // ── Main Page ──────────────────────────────────────────────────────────────────
 
-export default function BriefingPage() {
-  const [briefing, setBriefing]   = useState<Briefing | null>(null);
-  const [loading, setLoading]     = useState(true);
-  const [generating, setGenerating] = useState(false);
-  const [error, setError]         = useState('');
-  const [activeRole, setActiveRole] = useState<Role>('pm');
+export default function PlaybookPage() {
+  const [briefing, setBriefing]       = useState<Briefing | null>(null);
+  const [loading, setLoading]         = useState(true);
+  const [generating, setGenerating]   = useState(false);
+  const [error, setError]             = useState('');
+  const [activeRole, setActiveRole]   = useState<Role>('pm');
 
   const load = useCallback(async () => {
     try {
       const data = await api.getBriefing();
       setBriefing(data);
-    } catch { /* no briefing yet */ }
+    } catch { /* no playbook yet */ }
     finally { setLoading(false); }
   }, []);
 
@@ -297,6 +299,18 @@ export default function BriefingPage() {
     }
   };
 
+  const handleLog = useCallback(async (item: string) => {
+    const roleLabel = ROLES.find(r => r.id === activeRole)?.label ?? '';
+    await api.createDecision({
+      title:                item.length > 120 ? item.slice(0, 120) + '…' : item,
+      status:               'under_discussion',
+      priority:             'medium',
+      note:                 `Logged from Research Playbook — ${roleLabel}`,
+      sourceType:           'ai_generated',
+      sourceInterviewTitle: 'Research Playbook',
+    });
+  }, [activeRole]);
+
   if (loading) {
     return <div style={{ display: 'flex', justifyContent: 'center', padding: 48 }}><div className="spinner" /></div>;
   }
@@ -310,14 +324,14 @@ export default function BriefingPage() {
       {/* Confidence bar */}
       {briefing && confStyle && (
         <div style={{ background: confStyle.bg, borderBottom: '1px solid #e5e7eb', padding: '8px 24px', display: 'flex', alignItems: 'center', gap: 16, flexShrink: 0, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '0.78rem', fontWeight: 600, color: confStyle.color }}>
+          <span style={{ fontSize: '0.78rem', fontWeight: 700, color: confStyle.color }}>
             {confStyle.label}
           </span>
           <span style={{ fontSize: '0.78rem', color: '#6b7280' }}>
-            Based on {briefing.problemCount} problem{briefing.problemCount !== 1 ? 's' : ''} · {briefing.interviewCount} interview{briefing.interviewCount !== 1 ? 's' : ''}
+            {confStyle.hint}
           </span>
           <span style={{ fontSize: '0.78rem', color: '#9ca3af' }}>
-            Generated {new Date(briefing.generatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+            {briefing.problemCount} problem{briefing.problemCount !== 1 ? 's' : ''} · {briefing.interviewCount} interview{briefing.interviewCount !== 1 ? 's' : ''} · Generated {new Date(briefing.generatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
           </span>
           <Link to="/problems" style={{ fontSize: '0.78rem', color: '#4f46e5', textDecoration: 'none', fontWeight: 500, marginLeft: 'auto' }}>
             ← View Problem Analysis
@@ -354,7 +368,7 @@ export default function BriefingPage() {
             <span>←</span><span>Problem Analysis</span>
           </Link>
           <Link to="/decisions" className="sidebar-nav-btn" style={{ textDecoration: 'none', color: '#6b7280' }}>
-            <span>◈</span><span>Decisions Hub</span>
+            <span>◈</span><span>Decision Log</span>
           </Link>
         </aside>
 
@@ -363,36 +377,36 @@ export default function BriefingPage() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
             <div>
               <h1 style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: 4 }}>
-                {activeRoleData.icon} {activeRoleData.label} Briefing
+                {activeRoleData.icon} {activeRoleData.label} Playbook
               </h1>
-              <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>{activeRoleData.subtitle}</p>
+              <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                {activeRoleData.subtitle} · Click <strong>+ Log</strong> on any item to add it to your Decision Log
+              </p>
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button className="btn btn-ghost" onClick={handleGenerate} disabled={generating}>
-                {generating ? <><span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} /> Generating…</> : '↻ Regenerate'}
-              </button>
-            </div>
+            <button className="btn btn-ghost" onClick={handleGenerate} disabled={generating}>
+              {generating ? <><span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} /> Generating…</> : '↻ Regenerate'}
+            </button>
           </div>
 
           {error && <div className="error-msg">{error}</div>}
 
           {!briefing ? (
             <div className="empty-state">
-              <h3>No briefing yet</h3>
-              <p>Generate a role briefing from your problem analysis</p>
+              <h3>No playbook yet</h3>
+              <p>Generate a role playbook from your problem analysis</p>
               <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 12 }}>
                 <button className="btn btn-primary" onClick={handleGenerate} disabled={generating}>
-                  {generating ? 'Generating…' : '✨ Generate Role Briefing'}
+                  {generating ? 'Generating…' : '✨ Generate Research Playbook'}
                 </button>
                 <Link to="/problems" className="btn btn-ghost">← View Problems First</Link>
               </div>
             </div>
           ) : (
             <>
-              {activeRole === 'pm'             && <PMTab            data={briefing.pm} />}
-              {activeRole === 'designer'        && <DesignerTab      data={briefing.designer} />}
-              {activeRole === 'developer'       && <DeveloperTab     data={briefing.developer} />}
-              {activeRole === 'projectManager'  && <ProjectManagerTab data={briefing.projectManager} />}
+              {activeRole === 'pm'             && <PMTab             data={briefing.pm}             onLog={handleLog} />}
+              {activeRole === 'designer'        && <DesignerTab       data={briefing.designer}       onLog={handleLog} />}
+              {activeRole === 'developer'       && <DeveloperTab      data={briefing.developer}      onLog={handleLog} />}
+              {activeRole === 'projectManager'  && <ProjectManagerTab data={briefing.projectManager} onLog={handleLog} />}
             </>
           )}
 

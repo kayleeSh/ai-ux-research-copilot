@@ -35,8 +35,8 @@ function Nav() {
         <Link to="/problems" className={isActive('/problems') ? 'active' : ''}>
           Problems
         </Link>
-        <Link to="/briefing" className={isActive('/briefing') ? 'active' : ''}>
-          Briefing
+        <Link to="/playbook" className={isActive('/playbook') ? 'active' : ''}>
+          Playbook
         </Link>
       </div>
     </nav>
@@ -57,7 +57,7 @@ export default function App() {
           <Route path="/synthesis" element={<Synthesis />} />
           <Route path="/decisions" element={<Decisions />} />
           <Route path="/problems" element={<Problems />} />
-          <Route path="/briefing" element={<Briefing />} />
+          <Route path="/playbook" element={<Briefing />} />
         </Routes>
       </main>
     </BrowserRouter>

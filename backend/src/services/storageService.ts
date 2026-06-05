@@ -4,67 +4,6 @@ const interviews = new Map<string, Interview>();
 const insights   = new Map<string, Insight>();
 const decisions  = new Map<string, Decision>();
 
-const mockDecisions: Decision[] = [
-  {
-    id: 'decision-001',
-    title: 'Redesign morning workflow to eliminate 30-minute daily catch-up overhead',
-    status: 'open',
-    priority: 'high',
-    note: 'Participants report losing 30-40 minutes every morning catching up on Slack and email before starting productive work. A unified notification digest or async-first protocol could directly address this.',
-    owner: '',
-    dueDate: '',
-    evidenceQuotes: ['"I start by checking Slack and email, which honestly takes about 30-40 minutes just to catch up."'],
-    sourceType: 'ai_generated',
-    sourceInterviewId: 'mock-001',
-    sourceInterviewTitle: 'User Interview — Sarah (Product Manager)',
-    sourceInsightId: '',
-    statusHistory: [{ status: 'open', changedAt: new Date().toISOString() }],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: 'decision-002',
-    title: 'Build unified workspace consolidating research, specs, and product decisions',
-    status: 'in_progress',
-    priority: 'high',
-    note: 'The single most requested capability across interviews. Users context-switch between 12+ tools and spend more time managing tools than doing actual work.',
-    owner: 'Product Team',
-    dueDate: '',
-    evidenceQuotes: [
-      '"I just want one place where research, design decisions, and product specs all live together."',
-      '"I spend more time managing tools than actually doing work."'
-    ],
-    sourceType: 'ai_generated',
-    sourceInterviewId: 'mock-001',
-    sourceInterviewTitle: 'User Interview — Sarah (Product Manager)',
-    sourceInsightId: '',
-    statusHistory: [
-      { status: 'open',        changedAt: new Date(Date.now() - 86400000 * 2).toISOString() },
-      { status: 'in_progress', changedAt: new Date().toISOString() }
-    ],
-    createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
-    updatedAt: new Date().toISOString()
-  },
-  {
-    id: 'decision-003',
-    title: 'Automate research share-out pipeline to cut prep time from 2 hours to 15 minutes',
-    status: 'draft',
-    priority: 'medium',
-    note: 'Research share-out preparation consumes disproportionate time — copying findings across tools, formatting summaries, scheduling walkthroughs. An AI-assisted pipeline would address this directly.',
-    owner: '',
-    dueDate: '',
-    evidenceQuotes: ['"It takes me two hours to prep a research share-out that should take fifteen minutes."'],
-    sourceType: 'ai_generated',
-    sourceInterviewId: 'mock-001',
-    sourceInterviewTitle: 'User Interview — Sarah (Product Manager)',
-    sourceInsightId: '',
-    statusHistory: [{ status: 'draft', changedAt: new Date().toISOString() }],
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
-  }
-];
-
-mockDecisions.forEach(d => decisions.set(d.id, d));
 
 // ── Problems & Briefing (singleton — replaced on each generation) ─────────────
 

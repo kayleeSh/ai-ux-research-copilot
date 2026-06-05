@@ -12,7 +12,7 @@ decisionsRouter.get('/', (_req: Request, res: Response): void => {
 
 decisionsRouter.post('/', (req: Request, res: Response): void => {
   const body = req.body as Partial<Decision>;
-  const initialStatus = body.status ?? 'open';
+  const initialStatus = body.status ?? 'under_discussion';
   const decision: Decision = {
     id:                   uuidv4(),
     title:                body.title                ?? 'Untitled Decision',
@@ -70,7 +70,7 @@ decisionsRouter.post('/generate', async (req: Request, res: Response): Promise<v
     const created: Decision[] = raw.map(d => ({
       id:                   uuidv4(),
       title:                d.title         ?? 'Untitled Decision',
-      status:               'draft' as const,
+      status:               'under_discussion' as const,
       priority:             (d.priority as Decision['priority']) ?? 'medium',
       note:                 d.note          ?? '',
       owner:                '',
@@ -80,7 +80,7 @@ decisionsRouter.post('/generate', async (req: Request, res: Response): Promise<v
       sourceInterviewId,
       sourceInterviewTitle,
       sourceInsightId:      '',
-      statusHistory:        [{ status: 'draft', changedAt: now }],
+      statusHistory:        [{ status: 'under_discussion', changedAt: now }],
       createdAt:            now,
       updatedAt:            now
     }));
@@ -118,7 +118,7 @@ decisionsRouter.post('/generate-from-synthesis', async (req: Request, res: Respo
     const created: Decision[] = raw.map(d => ({
       id:                   uuidv4(),
       title:                d.title         ?? 'Untitled Decision',
-      status:               'draft' as const,
+      status:               'under_discussion' as const,
       priority:             (d.priority as Decision['priority']) ?? 'medium',
       note:                 d.note          ?? '',
       owner:                '',
@@ -128,7 +128,7 @@ decisionsRouter.post('/generate-from-synthesis', async (req: Request, res: Respo
       sourceInterviewId:    '',
       sourceInterviewTitle: 'Cross-Interview Synthesis',
       sourceInsightId:      '',
-      statusHistory:        [{ status: 'draft', changedAt: now }],
+      statusHistory:        [{ status: 'under_discussion', changedAt: now }],
       createdAt:            now,
       updatedAt:            now
     }));
