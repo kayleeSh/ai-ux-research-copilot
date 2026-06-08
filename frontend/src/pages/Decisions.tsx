@@ -13,17 +13,17 @@ const STATUS_LABEL: Record<Decision['status'], string> = {
 };
 
 const STATUS_BORDER: Record<Decision['status'], string> = {
-  under_discussion: '#9ca3af',
-  decided:          '#6b7280',
+  under_discussion: '#f59e0b',
+  decided:          '#059669',
   rejected:         '#d1d5db',
-  deferred:         '#d1d5db',
+  deferred:         '#a78bfa',
 };
 
 const STATUS_STYLE: Record<Decision['status'], React.CSSProperties> = {
-  under_discussion: { background: '#f3f4f6', color: '#374151' },
-  decided:          { background: '#f3f4f6', color: '#059669' },
+  under_discussion: { background: '#fffbeb', color: '#b45309' },
+  decided:          { background: '#f0fdf4', color: '#166534' },
   rejected:         { background: '#f3f4f6', color: '#6b7280' },
-  deferred:         { background: '#f3f4f6', color: '#6b7280' },
+  deferred:         { background: '#f5f3ff', color: '#6d28d9' },
 };
 
 const PRIORITY_TAG: Record<Decision['priority'], string> = {

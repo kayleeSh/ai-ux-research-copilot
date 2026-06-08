@@ -47,7 +47,7 @@ body {
 }
 
 .nav-links a:hover { background: #f3f4f6; color: #111827; }
-.nav-links a.active { background: #f3f4f6; color: #111827; font-weight: 600; }
+.nav-links a.active { background: #eff6ff; color: #1d4ed8; font-weight: 600; }
 
 .main { min-height: calc(100vh - 52px); }
 
@@ -68,16 +68,16 @@ body {
   white-space: nowrap;
 }
 
-.btn-primary  { background: #111827; color: #fff; }
-.btn-primary:hover:not(:disabled)  { background: #1f2937; }
+.btn-primary  { background: #4f46e5; color: #fff; }
+.btn-primary:hover:not(:disabled)  { background: #4338ca; }
 .btn-secondary { background: #f3f4f6; color: #374151; }
 .btn-secondary:hover:not(:disabled) { background: #e5e7eb; }
-.btn-success  { background: #374151; color: #fff; }
-.btn-success:hover:not(:disabled)  { background: #1f2937; }
-.btn-danger   { background: #374151; color: #fff; }
-.btn-danger:hover:not(:disabled)   { background: #111827; }
-.btn-warning  { background: #6b7280; color: #fff; }
-.btn-warning:hover:not(:disabled)  { background: #4b5563; }
+.btn-success  { background: #059669; color: #fff; }
+.btn-success:hover:not(:disabled)  { background: #047857; }
+.btn-danger   { background: #dc2626; color: #fff; }
+.btn-danger:hover:not(:disabled)   { background: #b91c1c; }
+.btn-warning  { background: #d97706; color: #fff; }
+.btn-warning:hover:not(:disabled)  { background: #b45309; }
 .btn-ghost    { background: transparent; color: #6b7280; border: 1px solid #e5e7eb; }
 .btn-ghost:hover:not(:disabled)    { background: #f9fafb; color: #374151; }
 .btn-sm { padding: 5px 11px; font-size: 0.8rem; border-radius: 6px; }
@@ -101,9 +101,9 @@ body {
 .tag-gray   { background: #f3f4f6; color: #6b7280; }
 .tag-purple { background: #f3f4f6; color: #374151; }
 
-.status-pending  { background: #f3f4f6; color: #6b7280; }
-.status-approved { background: #f3f4f6; color: #059669; }
-.status-rejected { background: #f3f4f6; color: #dc2626; }
+.status-pending  { background: #fffbeb; color: #92400e; }
+.status-approved { background: #f0fdf4; color: #166534; }
+.status-rejected { background: #fef2f2; color: #991b1b; }
 
 /* ── Upload Page ─────────────────────────────────── */
 .upload-page {
@@ -288,7 +288,7 @@ body {
   font-weight: 500;
 }
 
-.tab-btn.active { color: #111827; border-bottom-color: #111827; }
+.tab-btn.active { color: #4f46e5; border-bottom-color: #4f46e5; }
 .tab-btn:hover:not(.active) { color: #374151; background: #f9fafb; }
 
 /* ── AI Result Sections ──────────────────────────── */
@@ -418,7 +418,7 @@ body {
 
 .insight-card.approved { border-left-color: #059669; }
 .insight-card.rejected { border-left-color: #dc2626; opacity: 0.55; }
-.insight-card.pending  { border-left-color: #d1d5db; }
+.insight-card.pending  { border-left-color: #d97706; }
 
 .insight-body { flex: 1; min-width: 0; }
 
@@ -941,7 +941,7 @@ body {
 }
 
 .sidebar-nav-btn:hover:not(:disabled) { background: #efefef; color: #374151; }
-.sidebar-nav-btn.active               { background: #f3f4f6; color: #111827; font-weight: 600; }
+.sidebar-nav-btn.active               { background: #eef2ff; color: #4f46e5; font-weight: 600; }
 .sidebar-nav-btn.pending-nav          { opacity: 0.45; }
 .sidebar-nav-btn:disabled             { cursor: not-allowed; }
 

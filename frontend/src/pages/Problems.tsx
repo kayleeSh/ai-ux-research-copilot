@@ -7,15 +7,15 @@ import { NextStepBanner } from '../components/NextStepBanner';
 // ── Config ────────────────────────────────────────────────────────────────────
 
 const SEVERITY_CONFIG: Record<Problem['severity'], { label: string; color: string; bg: string; border: string }> = {
-  critical: { label: 'Critical', color: '#111827', bg: '#f3f4f6', border: '#6b7280' },
-  moderate: { label: 'Moderate', color: '#374151', bg: '#f3f4f6', border: '#9ca3af' },
-  minor:    { label: 'Minor',    color: '#6b7280', bg: '#f3f4f6', border: '#d1d5db' },
+  critical: { label: 'Critical', color: '#dc2626', bg: '#f3f4f6', border: '#dc2626' },
+  moderate: { label: 'Moderate', color: '#374151', bg: '#f3f4f6', border: '#d1d5db' },
+  minor:    { label: 'Minor',    color: '#6b7280', bg: '#f3f4f6', border: '#e5e7eb' },
 };
 
 const PROBLEM_STATUS_CONFIG: Record<Problem['status'], { label: string; color: string; bg: string; border: string }> = {
   unresolved:  { label: 'Unresolved',  color: '#9ca3af', bg: '#f3f4f6', border: '#e5e7eb' },
-  in_progress: { label: 'In Progress', color: '#374151', bg: '#f3f4f6', border: '#d1d5db' },
-  addressed:   { label: 'Addressed',   color: '#059669', bg: '#f3f4f6', border: '#d1d5db' },
+  in_progress: { label: 'In Progress', color: '#b45309', bg: '#fffbeb', border: '#fde68a' },
+  addressed:   { label: 'Addressed',   color: '#059669', bg: '#f0fdf4', border: '#bbf7d0' },
 };
 
 const FREQUENCY_LABEL: Record<Problem['frequency'], string> = {
@@ -185,7 +185,7 @@ function ProblemCard({ problem, isChild = false, onStatusChange }: { problem: Pr
           {(problem.status ?? 'unresolved') === 'in_progress' && (
             <button
               onClick={async () => { await api.updateProblemStatus(problem.id, 'addressed'); onStatusChange(problem.id, 'addressed'); }}
-              style={{ background: '#f0fdf4', color: '#059669', border: '1px solid #bbf7d0', borderRadius: 8, padding: '7px 14px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+              className="btn btn-success btn-sm"
             >
               ✓ Mark as Addressed
             </button>
@@ -193,7 +193,7 @@ function ProblemCard({ problem, isChild = false, onStatusChange }: { problem: Pr
           {(problem.status ?? 'unresolved') === 'addressed' && (
             <button
               onClick={async () => { await api.updateProblemStatus(problem.id, 'unresolved'); onStatusChange(problem.id, 'unresolved'); }}
-              style={{ background: '#f3f4f6', color: '#6b7280', border: '1px solid #d1d5db', borderRadius: 8, padding: '7px 14px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+              className="btn btn-ghost btn-sm"
             >
               ↺ Reopen
             </button>
