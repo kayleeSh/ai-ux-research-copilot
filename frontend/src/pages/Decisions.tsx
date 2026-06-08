@@ -13,22 +13,22 @@ const STATUS_LABEL: Record<Decision['status'], string> = {
 };
 
 const STATUS_BORDER: Record<Decision['status'], string> = {
-  under_discussion: '#f59e0b',
-  decided:          '#059669',
-  rejected:         '#dc2626',
-  deferred:         '#8b5cf6',
+  under_discussion: '#9ca3af',
+  decided:          '#6b7280',
+  rejected:         '#d1d5db',
+  deferred:         '#d1d5db',
 };
 
 const STATUS_STYLE: Record<Decision['status'], React.CSSProperties> = {
-  under_discussion: { background: '#fffbeb', color: '#b45309' },
-  decided:          { background: '#f0fdf4', color: '#166534' },
-  rejected:         { background: '#fef2f2', color: '#991b1b' },
-  deferred:         { background: '#f5f3ff', color: '#6d28d9' },
+  under_discussion: { background: '#f3f4f6', color: '#374151' },
+  decided:          { background: '#f3f4f6', color: '#059669' },
+  rejected:         { background: '#f3f4f6', color: '#6b7280' },
+  deferred:         { background: '#f3f4f6', color: '#6b7280' },
 };
 
 const PRIORITY_TAG: Record<Decision['priority'], string> = {
-  high:   'tag-red',
-  medium: 'tag-yellow',
+  high:   'tag-gray',
+  medium: 'tag-gray',
   low:    'tag-gray',
 };
 
@@ -354,11 +354,11 @@ export default function DecisionsPage() {
       {/* Stats bar */}
       <div className="synthesis-stats-bar">
         {[
-          { label: 'Total',            value: total,      icon: '📋', color: '#4f46e5' },
-          { label: 'Under Discussion', value: discussing, icon: '💬', color: '#d97706' },
-          { label: 'Decided',          value: decided,    icon: '🟢', color: '#059669' },
-          { label: 'Deferred',         value: deferred,   icon: '🟣', color: '#7c3aed' },
-          { label: 'Rejected',         value: rejected,   icon: '⚫', color: '#6b7280' },
+          { label: 'Total',            value: total,      icon: '📋', color: '#111827' },
+          { label: 'Under Discussion', value: discussing, icon: '◐',  color: '#111827' },
+          { label: 'Decided',          value: decided,    icon: '●',  color: '#111827' },
+          { label: 'Deferred',         value: deferred,   icon: '○',  color: '#111827' },
+          { label: 'Rejected',         value: rejected,   icon: '✕',  color: '#111827' },
         ].map((s, i) => (
           <div key={i} className="stat-card">
             <div className="stat-icon-wrap">{s.icon}</div>

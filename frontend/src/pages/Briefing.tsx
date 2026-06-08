@@ -16,9 +16,9 @@ const ROLES: { id: Role; label: string; icon: string; subtitle: string }[] = [
 ];
 
 const CONFIDENCE_STYLE: Record<Briefing['confidence'], { label: string; color: string; bg: string; hint: string }> = {
-  high:   { label: 'High Confidence',   color: '#059669', bg: '#f0fdf4', hint: '5+ interviews — findings are well-supported' },
-  medium: { label: 'Medium Confidence', color: '#d97706', bg: '#fffbeb', hint: 'Based on 2–4 interviews — add more for higher reliability' },
-  low:    { label: 'Low Confidence',    color: '#dc2626', bg: '#fef2f2', hint: 'Based on 1 interview — treat findings as directional only' },
+  high:   { label: 'High Confidence',   color: '#059669', bg: '#f9fafb', hint: '5+ interviews — findings are well-supported' },
+  medium: { label: 'Medium Confidence', color: '#374151', bg: '#f9fafb', hint: 'Based on 2–4 interviews — add more for higher reliability' },
+  low:    { label: 'Low Confidence',    color: '#dc2626', bg: '#f9fafb', hint: 'Based on 1 interview — treat findings as directional only' },
 };
 
 // ── Shared helpers ─────────────────────────────────────────────────────────────
@@ -126,7 +126,7 @@ function OKRCard({ okr, onLog }: { okr: OKR; onLog?: (item: string) => Promise<v
 function WarningTag({ text }: { text: string }) {
   const isRisk = text.toLowerCase().startsWith('risk');
   return (
-    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: '0.875rem', color: '#374151', lineHeight: 1.6, padding: '8px 12px', background: isRisk ? '#fff7ed' : '#f0f9ff', borderRadius: 8, border: `1px solid ${isRisk ? '#fed7aa' : '#bae6fd'}` }}>
+    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: '0.875rem', color: '#374151', lineHeight: 1.6, padding: '8px 12px', background: '#f9fafb', borderRadius: 8, border: '1px solid #e5e7eb' }}>
       <span style={{ flexShrink: 0 }}>{isRisk ? '⚠️' : '💭'}</span>
       <span>{text}</span>
     </div>
@@ -171,7 +171,7 @@ function DesignerTab({ data, onLog }: { data: Briefing['designer']; onLog: (item
       <SectionCard title="User Needs" icon="👤">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {data.userNeeds.map((need, i) => (
-            <div key={i} style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 8, padding: '10px 14px', fontSize: '0.875rem', color: '#0c4a6e', lineHeight: 1.55 }}>
+            <div key={i} style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8, padding: '10px 14px', fontSize: '0.875rem', color: '#374151', lineHeight: 1.55 }}>
               {need}
             </div>
           ))}
@@ -180,7 +180,7 @@ function DesignerTab({ data, onLog }: { data: Briefing['designer']; onLog: (item
       <SectionCard title="Jobs To Be Done" icon="💼">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {data.jobsToBeDone.map((jtbd, i) => (
-            <div key={i} style={{ background: '#f5f3ff', border: '1px solid #ddd6fe', borderRadius: 8, padding: '10px 14px', fontSize: '0.875rem', color: '#3b0764', lineHeight: 1.6, fontStyle: 'italic' }}>
+            <div key={i} style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8, padding: '10px 14px', fontSize: '0.875rem', color: '#374151', lineHeight: 1.6, fontStyle: 'italic' }}>
               {jtbd}
             </div>
           ))}
@@ -189,7 +189,7 @@ function DesignerTab({ data, onLog }: { data: Briefing['designer']; onLog: (item
       <SectionCard title="Design Principles" icon="🧭">
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
           {data.designPrinciples.map((p, i) => (
-            <span key={i} style={{ background: '#f0fdf4', border: '1px solid #86efac', color: '#14532d', borderRadius: 8, padding: '6px 12px', fontSize: '0.82rem', fontWeight: 500 }}>
+            <span key={i} style={{ background: '#f3f4f6', border: '1px solid #e5e7eb', color: '#374151', borderRadius: 8, padding: '6px 12px', fontSize: '0.82rem', fontWeight: 500 }}>
               {p}
             </span>
           ))}
@@ -214,12 +214,12 @@ function DeveloperTab({ data, onLog }: { data: Briefing['developer']; onLog: (it
       <SectionCard title="Acceptance Criteria" icon="✅">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {data.acceptanceCriteria.map((ac, i) => (
-            <div key={i} style={{ background: '#f0fdf4', borderRadius: 8, border: '1px solid #bbf7d0', padding: '10px 12px 0' }}>
+            <div key={i} style={{ background: '#f9fafb', borderRadius: 8, border: '1px solid #e5e7eb', padding: '10px 12px 0' }}>
               <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: '0.875rem', color: '#374151', lineHeight: 1.5 }}>
-                <span style={{ color: '#059669', flexShrink: 0 }}>✓</span>
+                <span style={{ color: '#374151', flexShrink: 0 }}>✓</span>
                 <span style={{ flex: 1 }}>{ac}</span>
               </div>
-              <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #bbf7d0', display: 'flex', justifyContent: 'flex-end', paddingBottom: 12 }}>
+              <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #e5e7eb', display: 'flex', justifyContent: 'flex-end', paddingBottom: 12 }}>
                 <LogButton item={ac} onLog={onLog} />
               </div>
             </div>

@@ -27,11 +27,11 @@ const NAV_ITEMS = [
 
 function StatsBar({ result }: { result: SynthesisResult }) {
   const stats = [
-    { label: 'Interviews Analyzed', value: result.interviewCount,                    icon: '👥', color: '#4f46e5' },
-    { label: 'Common Themes',       value: result.commonThemes.length,               icon: '🏷️', color: '#059669' },
-    { label: 'Patterns Found',      value: result.patterns.length,                   icon: '🔍', color: '#d97706' },
-    { label: 'Pain Points',         value: result.prioritizedPainPoints.length,      icon: '⚡', color: '#dc2626' },
-    { label: 'Recommendations',     value: result.recommendations.length,            icon: '💡', color: '#7c3aed' },
+    { label: 'Interviews Analyzed', value: result.interviewCount,                    icon: '👥', color: '#111827' },
+    { label: 'Common Themes',       value: result.commonThemes.length,               icon: '🏷️', color: '#111827' },
+    { label: 'Patterns Found',      value: result.patterns.length,                   icon: '🔍', color: '#111827' },
+    { label: 'Pain Points',         value: result.prioritizedPainPoints.length,      icon: '›',  color: '#111827' },
+    { label: 'Recommendations',     value: result.recommendations.length,            icon: '💡', color: '#111827' },
   ];
 
   return (

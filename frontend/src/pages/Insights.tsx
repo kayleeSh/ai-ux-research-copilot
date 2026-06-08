@@ -20,9 +20,9 @@ const TYPE_LABEL: Record<string, string> = {
 };
 
 const TYPE_COLOR: Record<string, string> = {
-  pain_point: 'tag-red',
-  theme: 'tag-purple',
-  quote: 'tag-blue'
+  pain_point: 'tag-gray',
+  theme:      'tag-gray',
+  quote:      'tag-gray'
 };
 
 function buildInsights(interview: Interview): FlatInsight[] {
@@ -165,14 +165,14 @@ interface DashboardStats {
 
 function InsightsStatsBar({ stats }: { stats: DashboardStats }) {
   const cards = [
-    { label: 'Interviews',    value: stats.interviews,   icon: '👥', color: '#4f46e5' },
-    { label: 'Total Insights', value: stats.totalInsights, icon: '💡', color: '#0369a1' },
-    { label: 'Pain Points',   value: stats.painPoints,   icon: '⚡', color: '#dc2626' },
-    { label: 'Themes',        value: stats.themes,       icon: '🏷️', color: '#7c3aed' },
-    { label: 'Key Quotes',    value: stats.quotes,       icon: '💬', color: '#0891b2' },
-    { label: 'Approved',      value: stats.approved,     icon: '✓',  color: '#059669' },
-    { label: 'Pending',       value: stats.pending,      icon: '⏳', color: '#d97706' },
-    { label: 'Rejected',      value: stats.rejected,     icon: '✗',  color: '#dc2626' },
+    { label: 'Interviews',    value: stats.interviews,   icon: '👥', color: '#111827' },
+    { label: 'Total Insights', value: stats.totalInsights, icon: '💡', color: '#111827' },
+    { label: 'Pain Points',   value: stats.painPoints,   icon: '›',  color: '#111827' },
+    { label: 'Themes',        value: stats.themes,       icon: '🏷️', color: '#111827' },
+    { label: 'Key Quotes',    value: stats.quotes,       icon: '💬', color: '#111827' },
+    { label: 'Approved',      value: stats.approved,     icon: '✓',  color: '#111827' },
+    { label: 'Pending',       value: stats.pending,      icon: '○',  color: '#111827' },
+    { label: 'Rejected',      value: stats.rejected,     icon: '✕',  color: '#111827' },
   ];
   return (
     <div className="synthesis-stats-bar">

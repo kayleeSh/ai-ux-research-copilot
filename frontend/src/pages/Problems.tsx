@@ -7,15 +7,15 @@ import { NextStepBanner } from '../components/NextStepBanner';
 // ── Config ────────────────────────────────────────────────────────────────────
 
 const SEVERITY_CONFIG: Record<Problem['severity'], { label: string; color: string; bg: string; border: string }> = {
-  critical: { label: 'Critical', color: '#dc2626', bg: '#fef2f2', border: '#dc2626' },
-  moderate: { label: 'Moderate', color: '#d97706', bg: '#fffbeb', border: '#f59e0b' },
+  critical: { label: 'Critical', color: '#111827', bg: '#f3f4f6', border: '#6b7280' },
+  moderate: { label: 'Moderate', color: '#374151', bg: '#f3f4f6', border: '#9ca3af' },
   minor:    { label: 'Minor',    color: '#6b7280', bg: '#f3f4f6', border: '#d1d5db' },
 };
 
 const PROBLEM_STATUS_CONFIG: Record<Problem['status'], { label: string; color: string; bg: string; border: string }> = {
-  unresolved: { label: 'Unresolved', color: '#6b7280', bg: '#f3f4f6', border: '#d1d5db' },
-  in_progress: { label: 'In Progress', color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe' },
-  addressed:   { label: 'Addressed',   color: '#059669', bg: '#f0fdf4', border: '#bbf7d0' },
+  unresolved:  { label: 'Unresolved',  color: '#9ca3af', bg: '#f3f4f6', border: '#e5e7eb' },
+  in_progress: { label: 'In Progress', color: '#374151', bg: '#f3f4f6', border: '#d1d5db' },
+  addressed:   { label: 'Addressed',   color: '#059669', bg: '#f3f4f6', border: '#d1d5db' },
 };
 
 const FREQUENCY_LABEL: Record<Problem['frequency'], string> = {
@@ -33,11 +33,11 @@ const ROLE_LABEL: Record<string, string> = {
 };
 
 const ROLE_COLOR: Record<string, string> = {
-  researcher:      '#4f46e5',
-  pm:              '#059669',
-  designer:        '#d97706',
-  developer:       '#0891b2',
-  project_manager: '#7c3aed',
+  researcher:      '#9ca3af',
+  pm:              '#9ca3af',
+  designer:        '#9ca3af',
+  developer:       '#9ca3af',
+  project_manager: '#9ca3af',
 };
 
 type ViewMode = 'hierarchy' | 'segment' | 'priority';
@@ -117,7 +117,7 @@ function ProblemCard({ problem, isChild = false, onStatusChange }: { problem: Pr
             </span>
           )}
           {problem.affectedRoles.map(role => (
-            <span key={role} className="tag" style={{ background: `${ROLE_COLOR[role]}15`, color: ROLE_COLOR[role], fontSize: '0.68rem', fontWeight: 600, padding: '2px 8px', borderRadius: 100 }}>
+            <span key={role} className="tag tag-gray" style={{ fontSize: '0.68rem', padding: '2px 8px' }}>
               {ROLE_LABEL[role] ?? role}
             </span>
           ))}
@@ -146,11 +146,11 @@ function ProblemCard({ problem, isChild = false, onStatusChange }: { problem: Pr
               key={i}
               style={{
                 fontSize: '0.7rem',
-                background: '#f0f9ff',
-                color: '#0369a1',
+                background: '#f3f4f6',
+                color: '#374151',
                 padding: '2px 8px',
                 borderRadius: 100,
-                border: '1px solid #bae6fd',
+                border: '1px solid #e5e7eb',
                 fontWeight: 500,
               }}
             >
@@ -361,11 +361,11 @@ export default function Problems() {
       {analysis && (
         <div className="synthesis-stats-bar">
           {[
-            { label: 'Total Problems', value: analysis.problems.length, icon: '🔍', color: '#4f46e5' },
-            { label: 'Critical',       value: criticalCount,            icon: '🔴', color: '#dc2626' },
-            { label: 'Moderate',       value: moderateCount,            icon: '🟡', color: '#d97706' },
-            { label: 'Interviews',     value: analysis.interviewCount,  icon: '👥', color: '#059669' },
-            { label: 'Roles Affected', value: allRoles.length,          icon: '👤', color: '#7c3aed' },
+            { label: 'Total Problems', value: analysis.problems.length, icon: '🔍', color: '#111827' },
+            { label: 'Critical',       value: criticalCount,            icon: '●',  color: '#111827' },
+            { label: 'Moderate',       value: moderateCount,            icon: '●',  color: '#111827' },
+            { label: 'Interviews',     value: analysis.interviewCount,  icon: '👥', color: '#111827' },
+            { label: 'Roles Affected', value: allRoles.length,          icon: '👤', color: '#111827' },
           ].map((s, i) => (
             <div key={i} className="stat-card">
               <div className="stat-icon-wrap">{s.icon}</div>

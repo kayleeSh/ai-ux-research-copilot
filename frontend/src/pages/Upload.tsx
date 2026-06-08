@@ -291,10 +291,10 @@ export default function Upload() {
   }, 0);
 
   const STATS = [
-    { label: 'Total Interviews', value: interviews.length, icon: '👥', color: '#4f46e5' },
-    { label: 'Analyzed',         value: analyzed.length,   icon: '✓',  color: '#059669' },
-    { label: 'Pending',          value: pending.length,    icon: '⏳', color: '#d97706' },
-    { label: 'Total Insights',   value: totalInsights,     icon: '💡', color: '#0891b2' },
+    { label: 'Total Interviews', value: interviews.length, icon: '👥', color: '#111827' },
+    { label: 'Analyzed',         value: analyzed.length,   icon: '✓',  color: '#111827' },
+    { label: 'Pending',          value: pending.length,    icon: '○',  color: '#111827' },
+    { label: 'Total Insights',   value: totalInsights,     icon: '💡', color: '#111827' },
   ];
 
   return (
