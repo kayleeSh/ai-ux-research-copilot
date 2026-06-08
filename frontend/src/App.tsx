@@ -11,7 +11,9 @@ import Briefing from './pages/Briefing';
 function Nav() {
   const loc = useLocation();
   const isActive = (path: string) =>
-    loc.pathname === path || (path !== '/upload' && loc.pathname.startsWith(path));
+    loc.pathname === path ||
+    (path === '/upload' && loc.pathname.startsWith('/workspace')) ||
+    (path !== '/upload' && loc.pathname.startsWith(path));
 
   return (
     <nav className="nav">

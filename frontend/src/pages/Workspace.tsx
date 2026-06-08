@@ -173,7 +173,7 @@ export default function Workspace() {
         <div className="workspace-header">
           <div style={{ minWidth: 0 }}>
             <div className="breadcrumb">
-              <Link to="/upload">Upload</Link>
+              <Link to="/upload">Research Hub</Link>
               <span>/</span>
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {interview.title}
