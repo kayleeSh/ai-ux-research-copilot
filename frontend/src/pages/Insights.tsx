@@ -444,6 +444,23 @@ export default function Insights() {
             );
           })}
 
+          {(filterType !== 'all' || searchQuery.trim()) &&
+            analyzedInterviews.every(iv => {
+              const raw = buildInsights(iv);
+              return raw
+                .filter(i => filterType === 'all' || i.type === filterType)
+                .filter(i => !searchQuery.trim() || (overrides[i.id] ?? i.content).toLowerCase().includes(searchQuery.toLowerCase()))
+                .length === 0;
+            }) && (
+              <div className="empty-state">
+                <h3>No insights match</h3>
+                <p>Try clearing your search or changing the filter</p>
+                <button className="btn btn-ghost" style={{ marginTop: 8 }} onClick={() => { setFilterType('all'); setSearchQuery(''); }}>
+                  Clear filters
+                </button>
+              </div>
+            )}
+
           <NextStepBanner
             icon="🔗"
             title="Synthesize across interviews"

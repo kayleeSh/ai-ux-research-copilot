@@ -66,6 +66,7 @@ export default function Workspace() {
   const [saving, setSaving] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const [streamText, setStreamText] = useState('');
+  const [confirmRegen, setConfirmRegen] = useState(false);
 
   const [editSummary, setEditSummary] = useState('');
   const [editQuotes, setEditQuotes] = useState<string[]>([]);
@@ -98,6 +99,15 @@ export default function Workspace() {
 
   useEffect(() => { loadInterview(); }, [loadInterview]);
 
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (dirty) { e.preventDefault(); e.returnValue = ''; }
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [dirty]);
+
+
   const handleSave = async () => {
     if (!interview?.aiResult) return;
     setSaving(true);
@@ -119,6 +129,8 @@ export default function Workspace() {
   };
 
   const handleRegenerate = async () => {
+    if (dirty && !confirmRegen) { setConfirmRegen(true); return; }
+    setConfirmRegen(false);
     if (!interview) return;
     setRegenerating(true);
     setStreamText('regenerating');
@@ -161,7 +173,12 @@ export default function Workspace() {
     );
   }
 
-  if (error) return <div style={{ padding: 24 }}><div className="error-msg">{error}</div></div>;
+  if (error) return (
+    <div style={{ padding: 24 }}>
+      <div className="error-msg">{error}</div>
+      <button className="btn btn-ghost btn-sm" style={{ marginTop: 8 }} onClick={loadInterview}>Try again</button>
+    </div>
+  );
   if (!interview) return <div style={{ padding: 24 }}>Interview not found.</div>;
 
   const counts = [editQuotes.length, editPainPoints.length, editThemes.length, editClusters.length];
@@ -196,13 +213,21 @@ export default function Workspace() {
                 {saving ? 'Saving…' : 'Save'}
               </button>
             )}
-            <button
-              className="btn btn-ghost btn-sm"
-              onClick={handleRegenerate}
-              disabled={regenerating}
-            >
-              {regenerating ? 'Running…' : '↻ Regenerate'}
-            </button>
+            {confirmRegen ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8, padding: '4px 10px' }}>
+                <span style={{ fontSize: '0.75rem', color: '#92400e' }}>Overwrite edits?</span>
+                <button className="btn btn-danger btn-sm" onClick={handleRegenerate}>Yes</button>
+                <button className="btn btn-ghost btn-sm" onClick={() => setConfirmRegen(false)}>No</button>
+              </div>
+            ) : (
+              <button
+                className="btn btn-ghost btn-sm"
+                onClick={handleRegenerate}
+                disabled={regenerating}
+              >
+                {regenerating ? 'Running…' : '↻ Regenerate'}
+              </button>
+            )}
             <button
               className="btn btn-secondary btn-sm"
               onClick={() => navigate(`/report/${interview.id}`)}

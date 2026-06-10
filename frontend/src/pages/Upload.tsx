@@ -104,6 +104,18 @@ function IconReport() {
   );
 }
 
+function IconTrash() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="2,3 12,3" />
+      <path d="M5 3V2h4v1" />
+      <rect x="3" y="3" width="8" height="9" rx="1" />
+      <line x1="5.5" y1="6" x2="5.5" y2="10" />
+      <line x1="8.5" y1="6" x2="8.5" y2="10" />
+    </svg>
+  );
+}
+
 // ── Upload Modal ──────────────────────────────────────────────────────────────
 
 interface UploadModalProps {
@@ -132,7 +144,8 @@ function UploadModal({ onClose, onSuccess }: UploadModalProps) {
     if (e.target.files?.[0]) setFile(e.target.files[0]);
   };
 
-  const canSubmit = mode === 'file' ? !!file : text.trim().length > 0;
+  const wordCount = text.split(/\s+/).filter(Boolean).length;
+  const canSubmit = mode === 'file' ? !!file : wordCount >= 50;
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
@@ -236,8 +249,8 @@ function UploadModal({ onClose, onSuccess }: UploadModalProps) {
                   style={{ minHeight: '160px' }}
                 />
                 {text.length > 0 && (
-                  <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: 4 }}>
-                    {text.split(/\s+/).filter(Boolean).length} words
+                  <div style={{ fontSize: '0.75rem', marginTop: 4, color: wordCount >= 50 ? '#9ca3af' : '#d97706' }}>
+                    {wordCount} words{wordCount < 50 && ` — need at least 50 to analyze`}
                   </div>
                 )}
               </div>
@@ -281,6 +294,12 @@ export default function Upload() {
     setShowModal(false);
     fetchInterviews();
     navigate(`/workspace/${id}`);
+  };
+
+  const handleDelete = async (id: string, title: string) => {
+    if (!window.confirm(`Delete "${title}"? This cannot be undone.`)) return;
+    await api.deleteInterview(id);
+    fetchInterviews();
   };
 
   const analyzed      = interviews.filter(iv => !!iv.aiResult);
@@ -333,7 +352,7 @@ export default function Upload() {
         {/* Table header */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: '36px 1fr 130px 90px 60px 70px 100px 280px',
+          gridTemplateColumns: '36px 1fr 130px 90px 60px 70px 100px 340px',
           padding: '10px 20px',
           background: '#f9fafb',
           borderBottom: '1px solid #e5e7eb',
@@ -382,7 +401,7 @@ export default function Upload() {
                 key={iv.id}
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: '36px 1fr 130px 90px 60px 70px 100px 280px',
+                  gridTemplateColumns: '36px 1fr 130px 90px 60px 70px 100px 340px',
                   padding: '13px 20px',
                   borderBottom: '1px solid #f3f4f6',
                   fontSize: '0.875rem',
@@ -465,6 +484,15 @@ export default function Upload() {
                       Report
                     </button>
                   )}
+                  <button
+                    className="btn-wired"
+                    onClick={() => handleDelete(iv.id, iv.title)}
+                    title="Delete interview"
+                    style={{ color: '#dc2626', borderColor: '#fecaca' }}
+                  >
+                    <span className="wired-icon"><IconTrash /></span>
+                    Delete
+                  </button>
                 </div>
               </div>
             );

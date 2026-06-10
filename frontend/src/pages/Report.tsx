@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api } from '../api/client';
 import { Report, Cluster } from '../types';
@@ -10,13 +10,17 @@ export default function ReportPage() {
   const [error, setError] = useState('');
   const [downloading, setDownloading] = useState(false);
 
-  useEffect(() => {
+  const loadReport = useCallback(() => {
     if (!id) return;
+    setError('');
+    setLoading(true);
     api.getReport(id)
       .then(data => setReport(data))
       .catch(err => setError(err instanceof Error ? err.message : 'Failed to load report'))
       .finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => { loadReport(); }, [loadReport]);
 
   const downloadMarkdown = async () => {
     if (!id || !report) return;
@@ -47,7 +51,12 @@ export default function ReportPage() {
     );
   }
 
-  if (error) return <div style={{ padding: 24 }}><div className="error-msg">{error}</div></div>;
+  if (error) return (
+    <div style={{ padding: 24 }}>
+      <div className="error-msg">{error}</div>
+      <button className="btn btn-ghost btn-sm" style={{ marginTop: 8 }} onClick={loadReport}>Try again</button>
+    </div>
+  );
   if (!report) return <div style={{ padding: 24 }}>Report not found.</div>;
 
   return (

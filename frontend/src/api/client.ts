@@ -117,6 +117,8 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     }),
+  deleteInterview: (id: string) =>
+    request<{ success: boolean }>(`/interviews/${id}`, { method: 'DELETE' }),
 
   // ── Cross-interview synthesis ─────────────────────────────────────────────
   synthesize: (interviewIds: string[]) =>

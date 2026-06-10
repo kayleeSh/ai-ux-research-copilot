@@ -269,8 +269,20 @@ export default function Synthesis() {
             </div>
 
             <div className="card" style={{ marginBottom: 24 }}>
-              <div style={{ fontWeight: 600, marginBottom: 14, fontSize: '0.875rem' }}>
-                Select Interviews to Synthesize
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>Select Interviews to Synthesize</div>
+                {interviews.length > 0 && (
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => setSelected(
+                      selected.size === interviews.length
+                        ? new Set()
+                        : new Set(interviews.map(iv => iv.id))
+                    )}
+                  >
+                    {selected.size === interviews.length ? 'Deselect All' : 'Select All'}
+                  </button>
+                )}
               </div>
 
               {interviews.length === 0 ? (
