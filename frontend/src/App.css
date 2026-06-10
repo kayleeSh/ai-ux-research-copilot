@@ -105,6 +105,7 @@ body {
   box-shadow: 0 2px 10px rgba(13, 148, 136, 0.3);
 }
 .btn-analyze:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-analyze-sm { padding: 7px 14px; font-size: 0.8rem; }
 
 .btn-analyze-pill {
   display: inline-flex; align-items: center; justify-content: center;

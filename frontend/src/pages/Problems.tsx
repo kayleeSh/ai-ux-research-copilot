@@ -488,11 +488,13 @@ export default function Problems() {
                   <button className="btn btn-danger btn-sm" onClick={() => { setConfirmRegen(false); handleGenerate(); }}>Yes</button>
                   <button className="btn btn-ghost btn-sm" onClick={() => setConfirmRegen(false)}>Cancel</button>
                 </div>
+              ) : generating ? (
+                <div className="btn-analyze-pill"><div className="btn-analyze-pill-spinner" /></div>
               ) : (
-                <button className="btn btn-outline btn-sm" onClick={() => analysis ? setConfirmRegen(true) : handleGenerate()} disabled={generating}>
-                    <IconRefresh />
-                    {generating ? 'Generating' : 'Regenerate'}
-                  </button>
+                <button className="btn-analyze btn-analyze-sm" onClick={() => analysis ? setConfirmRegen(true) : handleGenerate()}>
+                  <IconRefresh />
+                  Regenerate
+                </button>
               )}
               <Link to="/playbook" className="btn btn-primary">View Playbook →</Link>
             </div>
@@ -505,10 +507,14 @@ export default function Problems() {
               <h3>No problem analysis yet</h3>
               <p>Generate a problem analysis from your research interviews</p>
               <div style={{ marginTop: 12 }}>
-                <button className="btn btn-primary" onClick={handleGenerate} disabled={generating}>
-                  <IconStar />
-                  {generating ? 'Generating' : 'Generate Problem Analysis'}
-                </button>
+                {generating ? (
+                  <div className="btn-analyze-pill"><div className="btn-analyze-pill-spinner" /></div>
+                ) : (
+                  <button className="btn-analyze" onClick={handleGenerate}>
+                    <IconStar />
+                    Generate Problem Analysis
+                  </button>
+                )}
               </div>
             </div>
           ) : (

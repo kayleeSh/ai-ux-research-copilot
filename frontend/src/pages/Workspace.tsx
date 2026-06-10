@@ -222,15 +222,13 @@ export default function Workspace() {
                 <button className="btn btn-danger btn-sm" onClick={handleRegenerate}>Yes</button>
                 <button className="btn btn-ghost btn-sm" onClick={() => setConfirmRegen(false)}>No</button>
               </div>
+            ) : regenerating ? (
+              <div className="btn-analyze-pill"><div className="btn-analyze-pill-spinner" /></div>
             ) : (
-              <button
-                  className="btn btn-outline btn-sm"
-                  onClick={handleRegenerate}
-                  disabled={regenerating}
-                >
-                  <IconRefresh />
-                  {regenerating ? 'Running' : 'Regenerate'}
-                </button>
+              <button className="btn-analyze btn-analyze-sm" onClick={handleRegenerate}>
+                <IconRefresh />
+                Regenerate
+              </button>
             )}
             <button
               className="btn btn-secondary btn-sm"
@@ -251,10 +249,14 @@ export default function Workspace() {
             <h3>No analysis yet</h3>
             <p>Click Regenerate to run the AI analysis</p>
             <div>
-              <button className="btn btn-primary" onClick={handleRegenerate} disabled={regenerating}>
-                <IconRefresh />
-                {regenerating ? 'Running' : 'Run Analysis'}
-              </button>
+              {regenerating ? (
+                <div className="btn-analyze-pill"><div className="btn-analyze-pill-spinner" /></div>
+              ) : (
+                <button className="btn-analyze" onClick={handleRegenerate}>
+                  <IconRefresh />
+                  Run Analysis
+                </button>
+              )}
             </div>
           </div>
         ) : (

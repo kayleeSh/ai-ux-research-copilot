@@ -330,17 +330,18 @@ export default function Synthesis() {
               )}
 
               <div style={{ marginTop: 16, display: 'flex', gap: 12, alignItems: 'center' }}>
-                  <button
-                    className="btn btn-primary"
-                    onClick={handleSynthesize}
-                    disabled={selected.size < 2 || running}
-                  >
-                    <IconCircles />
-                    {running
-                      ? 'Synthesizing'
-                      : `Synthesize${selected.size > 0 ? ` ${selected.size} Interviews` : ''}`
-                    }
-                  </button>
+                  {running ? (
+                    <div className="btn-analyze-pill"><div className="btn-analyze-pill-spinner" /></div>
+                  ) : (
+                    <button
+                      className="btn-analyze"
+                      onClick={handleSynthesize}
+                      disabled={selected.size < 2}
+                    >
+                      <IconCircles />
+                      {`Synthesize${selected.size > 0 ? ` ${selected.size} Interviews` : ''}`}
+                    </button>
+                  )}
                 {selected.size < 2 && (
                   <span style={{ fontSize: '0.8rem', color: '#9ca3af' }}>Select at least 2 interviews</span>
                 )}

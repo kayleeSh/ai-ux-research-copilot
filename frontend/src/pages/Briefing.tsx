@@ -451,11 +451,13 @@ export default function PlaybookPage() {
                 <button className="btn btn-danger btn-sm" onClick={() => { setConfirmRegen(false); handleGenerate(); }}>Yes</button>
                 <button className="btn btn-ghost btn-sm" onClick={() => setConfirmRegen(false)}>Cancel</button>
               </div>
+            ) : generating ? (
+              <div className="btn-analyze-pill"><div className="btn-analyze-pill-spinner" /></div>
             ) : (
-              <button className="btn btn-outline btn-sm" onClick={() => briefing ? setConfirmRegen(true) : handleGenerate()} disabled={generating}>
-                  <IconRefresh />
-                  {generating ? 'Generating' : 'Regenerate'}
-                </button>
+              <button className="btn-analyze btn-analyze-sm" onClick={() => briefing ? setConfirmRegen(true) : handleGenerate()}>
+                <IconRefresh />
+                Regenerate
+              </button>
             )}
           </div>
 
@@ -466,10 +468,14 @@ export default function PlaybookPage() {
               <h3>No playbook yet</h3>
               <p>Generate a role playbook from your problem analysis</p>
               <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 12 }}>
-                  <button className="btn btn-primary" onClick={handleGenerate} disabled={generating}>
-                    <IconStar />
-                    {generating ? 'Generating' : 'Generate Research Playbook'}
-                  </button>
+                  {generating ? (
+                    <div className="btn-analyze-pill"><div className="btn-analyze-pill-spinner" /></div>
+                  ) : (
+                    <button className="btn-analyze" onClick={handleGenerate}>
+                      <IconStar />
+                      Generate Research Playbook
+                    </button>
+                  )}
                 </div>
                 <Link to="/problems" className="btn btn-ghost">← View Problems First</Link>
               </div>
