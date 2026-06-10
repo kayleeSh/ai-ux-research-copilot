@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client';
-import { Briefing, OKR } from '../types';
+import { Playbook, OKR } from '../types';
 import { NextStepBanner } from '../components/NextStepBanner';
 
 // ── Config ────────────────────────────────────────────────────────────────────
@@ -15,7 +15,7 @@ const ROLES: { id: Role; label: string; icon: string; subtitle: string }[] = [
   { id: 'projectManager', label: 'Project Manager', icon: '📋', subtitle: 'Milestones, dependencies & open questions' },
 ];
 
-const CONFIDENCE_STYLE: Record<Briefing['confidence'], { label: string; color: string; bg: string; hint: string }> = {
+const CONFIDENCE_STYLE: Record<Playbook['confidence'], { label: string; color: string; bg: string; hint: string }> = {
   high:   { label: 'High Confidence',   color: '#059669', bg: '#f9fafb', hint: '5+ interviews — findings are well-supported' },
   medium: { label: 'Medium Confidence', color: '#374151', bg: '#f9fafb', hint: 'Based on 2–4 interviews — add more for higher reliability' },
   low:    { label: 'Low Confidence',    color: '#dc2626', bg: '#f9fafb', hint: 'Based on 1 interview — treat findings as directional only' },
@@ -135,7 +135,7 @@ function WarningTag({ text }: { text: string }) {
 
 // ── Role Tab Content ───────────────────────────────────────────────────────────
 
-function PMTab({ data, onLog }: { data: Briefing['pm']; onLog: (item: string) => Promise<void> }) {
+function PMTab({ data, onLog }: { data: Playbook['pm']; onLog: (item: string) => Promise<void> }) {
   return (
     <>
       <SectionCard title="Objectives" icon="🎯">
@@ -165,7 +165,7 @@ function PMTab({ data, onLog }: { data: Briefing['pm']; onLog: (item: string) =>
   );
 }
 
-function DesignerTab({ data, onLog }: { data: Briefing['designer']; onLog: (item: string) => Promise<void> }) {
+function DesignerTab({ data, onLog }: { data: Playbook['designer']; onLog: (item: string) => Promise<void> }) {
   return (
     <>
       <SectionCard title="User Needs" icon="👤">
@@ -205,7 +205,7 @@ function DesignerTab({ data, onLog }: { data: Briefing['designer']; onLog: (item
   );
 }
 
-function DeveloperTab({ data, onLog }: { data: Briefing['developer']; onLog: (item: string) => Promise<void> }) {
+function DeveloperTab({ data, onLog }: { data: Playbook['developer']; onLog: (item: string) => Promise<void> }) {
   return (
     <>
       <SectionCard title="Deliverables" icon="📦">
@@ -246,7 +246,7 @@ function DeveloperTab({ data, onLog }: { data: Briefing['developer']; onLog: (it
   );
 }
 
-function ProjectManagerTab({ data, onLog }: { data: Briefing['projectManager']; onLog: (item: string) => Promise<void> }) {
+function ProjectManagerTab({ data, onLog }: { data: Playbook['projectManager']; onLog: (item: string) => Promise<void> }) {
   return (
     <>
       <SectionCard title="Deliverables" icon="📦">
@@ -303,7 +303,7 @@ function ProjectManagerTab({ data, onLog }: { data: Briefing['projectManager']; 
 // ── Main Page ──────────────────────────────────────────────────────────────────
 
 export default function PlaybookPage() {
-  const [briefing, setBriefing]       = useState<Briefing | null>(null);
+  const [briefing, setBriefing]       = useState<Playbook | null>(null);
   const [loading, setLoading]         = useState(true);
   const [generating, setGenerating]   = useState(false);
   const [error, setError]             = useState('');

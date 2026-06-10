@@ -20,9 +20,9 @@ const TYPE_LABEL: Record<string, string> = {
 };
 
 const TYPE_COLOR: Record<string, string> = {
-  pain_point: 'tag-gray',
-  theme:      'tag-gray',
-  quote:      'tag-gray'
+  pain_point: 'tag-red',
+  theme:      'tag-purple',
+  quote:      'tag-blue'
 };
 
 function buildInsights(interview: Interview): FlatInsight[] {
@@ -198,6 +198,8 @@ export default function Insights() {
   const [activeId, setActiveId]       = useState<string>('all');
   const [pendingDecisionInsight, setPendingDecisionInsight] = useState<FlatInsight | null>(null);
   const [decisionCreatedFor, setDecisionCreatedFor] = useState<Set<string>>(new Set());
+  const [filterType, setFilterType] = useState<'all' | 'pain_point' | 'theme' | 'quote'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const mainRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -342,11 +344,34 @@ export default function Insights() {
             <Link to="/upload" className="btn btn-primary btn-sm">+ New Interview</Link>
           </div>
 
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 20, flexWrap: 'wrap' }}>
+            <input
+              type="text"
+              placeholder="Search insights…"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              style={{ flex: 1, minWidth: 180, padding: '7px 12px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: '0.875rem', fontFamily: 'inherit', color: '#111827' }}
+            />
+            {(['all', 'pain_point', 'theme', 'quote'] as const).map(type => (
+              <button
+                key={type}
+                className={`tab-btn ${filterType === type ? 'active' : ''}`}
+                onClick={() => setFilterType(type)}
+              >
+                {type === 'all' ? 'All' : TYPE_LABEL[type]}
+              </button>
+            ))}
+          </div>
+
           {analyzedInterviews.map(interview => {
-            const insights = buildInsights(interview);
-            const approvedCount = insights.filter(i => getStatus(i.id) === 'approved').length;
-            const rejectedCount = insights.filter(i => getStatus(i.id) === 'rejected').length;
-            const pendingCount  = insights.filter(i => getStatus(i.id) === 'pending').length;
+            const rawInsights = buildInsights(interview);
+            const insights = rawInsights
+              .filter(i => filterType === 'all' || i.type === filterType)
+              .filter(i => !searchQuery.trim() || (overrides[i.id] ?? i.content).toLowerCase().includes(searchQuery.toLowerCase()));
+            if (insights.length === 0) return null;
+            const approvedCount = rawInsights.filter(i => getStatus(i.id) === 'approved').length;
+            const rejectedCount = rawInsights.filter(i => getStatus(i.id) === 'rejected').length;
+            const pendingCount  = rawInsights.filter(i => getStatus(i.id) === 'pending').length;
             const dCount        = decisionCountByInterview[interview.id] ?? 0;
 
             return (

@@ -96,7 +96,7 @@ export interface OKR {
   keyResults: string[];
 }
 
-export interface Briefing {
+export interface Playbook {
   id: string;
   confidence: 'high' | 'medium' | 'low';
   problemCount: number;
@@ -131,6 +131,8 @@ export interface Briefing {
   };
   generatedAt: string;
 }
+
+export type Briefing = Playbook;
 
 export interface Decision {
   id: string;

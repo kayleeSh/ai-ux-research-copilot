@@ -6,7 +6,7 @@ import Report from './pages/Report';
 import Synthesis from './pages/Synthesis';
 import Decisions from './pages/Decisions';
 import Problems from './pages/Problems';
-import Briefing from './pages/Briefing';
+import Playbook from './pages/Briefing';
 
 function Nav() {
   const loc = useLocation();
@@ -59,7 +59,7 @@ export default function App() {
           <Route path="/synthesis" element={<Synthesis />} />
           <Route path="/decisions" element={<Decisions />} />
           <Route path="/problems" element={<Problems />} />
-          <Route path="/playbook" element={<Briefing />} />
+          <Route path="/playbook" element={<Playbook />} />
         </Routes>
       </main>
     </BrowserRouter>
