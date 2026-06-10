@@ -54,6 +54,15 @@ function StatsBar({ result }: { result: SynthesisResult }) {
   );
 }
 
+function IconCircles() {
+  return (
+    <svg width="14" height="11" viewBox="0 0 14 11" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="4.5" cy="5.5" r="4" />
+      <circle cx="9.5" cy="5.5" r="4" />
+    </svg>
+  );
+}
+
 function SynthesisLoader({ count }: { count: number }) {
   const [step, setStep] = useState(0);
   const [dots, setDots] = useState('');
@@ -299,7 +308,7 @@ export default function Synthesis() {
                         type="checkbox"
                         checked={selected.has(iv.id)}
                         onChange={() => toggle(iv.id)}
-                        style={{ accentColor: '#4f46e5' }}
+                        style={{ accentColor: '#0d9488' }}
                       />
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontWeight: 500, fontSize: '0.875rem' }}>{iv.title}</div>
@@ -321,16 +330,17 @@ export default function Synthesis() {
               )}
 
               <div style={{ marginTop: 16, display: 'flex', gap: 12, alignItems: 'center' }}>
-                <button
-                  className="btn btn-primary"
-                  onClick={handleSynthesize}
-                  disabled={selected.size < 2 || running}
-                >
-                  {running
-                    ? <><span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} /> Synthesizing…</>
-                    : `✨ Synthesize ${selected.size > 0 ? `${selected.size} interviews` : ''} →`
-                  }
-                </button>
+                  <button
+                    className="btn btn-primary"
+                    onClick={handleSynthesize}
+                    disabled={selected.size < 2 || running}
+                  >
+                    <IconCircles />
+                    {running
+                      ? 'Synthesizing'
+                      : `Synthesize${selected.size > 0 ? ` ${selected.size} Interviews` : ''}`
+                    }
+                  </button>
                 {selected.size < 2 && (
                   <span style={{ fontSize: '0.8rem', color: '#9ca3af' }}>Select at least 2 interviews</span>
                 )}

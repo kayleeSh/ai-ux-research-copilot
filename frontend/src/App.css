@@ -47,7 +47,7 @@ body {
 }
 
 .nav-links a:hover { background: #f3f4f6; color: #111827; }
-.nav-links a.active { background: #eff6ff; color: #1d4ed8; font-weight: 600; }
+.nav-links a.active { background: #f0fdfa; color: #0d9488; font-weight: 600; }
 
 .main { min-height: calc(100vh - 52px); }
 
@@ -68,8 +68,8 @@ body {
   white-space: nowrap;
 }
 
-.btn-primary  { background: #4f46e5; color: #fff; }
-.btn-primary:hover:not(:disabled)  { background: #4338ca; }
+.btn-primary  { background: #0d9488; color: #fff; }
+.btn-primary:hover:not(:disabled)  { background: #0f766e; }
 .btn-secondary { background: #f3f4f6; color: #374151; }
 .btn-secondary:hover:not(:disabled) { background: #e5e7eb; }
 .btn-success  { background: #059669; color: #fff; }
@@ -80,8 +80,51 @@ body {
 .btn-warning:hover:not(:disabled)  { background: #b45309; }
 .btn-ghost    { background: transparent; color: #6b7280; border: 1px solid #e5e7eb; }
 .btn-ghost:hover:not(:disabled)    { background: #f9fafb; color: #374151; }
+.btn-outline  { background: #fff; color: #0d9488; border: 1px solid #0d9488; }
+.btn-outline:hover:not(:disabled)  { background: #f0fdfa; }
 .btn-sm { padding: 5px 11px; font-size: 0.8rem; border-radius: 6px; }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── Analyze with AI button ──────────────────────── */
+.btn-analyze {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 10px 22px;
+  background: linear-gradient(135deg, #0d9488 0%, #0891b2 100%);
+  color: #fff; border: none; border-radius: 8px;
+  font-size: 0.875rem; font-weight: 600;
+  cursor: pointer; font-family: inherit; white-space: nowrap;
+  transition: background 0.25s ease, transform 0.18s ease, box-shadow 0.25s ease;
+}
+.btn-analyze:hover:not(:disabled) {
+  background: linear-gradient(315deg, #0d9488 0%, #06b6d4 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 22px rgba(13, 148, 136, 0.45);
+}
+.btn-analyze:active:not(:disabled) {
+  transform: scale(0.96) translateY(0);
+  box-shadow: 0 2px 10px rgba(13, 148, 136, 0.3);
+}
+.btn-analyze:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.btn-analyze-pill {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 42px; height: 40px;
+  background: linear-gradient(135deg, #0d9488 0%, #0891b2 100%);
+  border-radius: 50%;
+  box-shadow: 0 4px 18px rgba(13, 148, 136, 0.45);
+  animation: btn-pill-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+.btn-analyze-pill-spinner {
+  width: 18px; height: 18px;
+  border: 2.5px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+}
+@keyframes btn-pill-in {
+  from { transform: scale(0.5); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
 
 /* ── Tags ────────────────────────────────────────── */
 .tag {
@@ -288,7 +331,7 @@ body {
   font-weight: 500;
 }
 
-.tab-btn.active { color: #4f46e5; border-bottom-color: #4f46e5; }
+.tab-btn.active { color: #0d9488; border-bottom-color: #0d9488; }
 .tab-btn:hover:not(.active) { color: #374151; background: #f9fafb; }
 
 /* ── AI Result Sections ──────────────────────────── */
@@ -941,7 +984,7 @@ body {
 }
 
 .sidebar-nav-btn:hover:not(:disabled) { background: #efefef; color: #374151; }
-.sidebar-nav-btn.active               { background: #eef2ff; color: #4f46e5; font-weight: 600; }
+.sidebar-nav-btn.active               { background: #f0fdfa; color: #0d9488; font-weight: 600; }
 .sidebar-nav-btn.pending-nav          { opacity: 0.45; }
 .sidebar-nav-btn:disabled             { cursor: not-allowed; }
 
@@ -1064,4 +1107,193 @@ body {
 
 .btn-wired:hover:not(:disabled) .wired-icon {
   color: #6b7280;
+}
+
+/* ── Research Lab: AI Button System ─────────────────────────────────────────── */
+
+@property --ai-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes ai-border-spin {
+  to { --ai-angle: 360deg; }
+}
+
+@keyframes ai-scan-sweep {
+  0%   { left: -30%; }
+  100% { left: 130%; }
+}
+
+@keyframes ai-dot-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+
+/* Wrapper: adds animated conic border trace when .running */
+.ai-btn-wrap {
+  display: inline-flex;
+  border-radius: 10px;
+  position: relative;
+}
+
+.ai-btn-wrap.running {
+  padding: 2px;
+  background: conic-gradient(from var(--ai-angle), transparent 0deg, #22d3ee 70deg, transparent 140deg);
+  animation: ai-border-spin 1.2s linear infinite;
+}
+
+/* Core AI button — Method A: gradient reverse on hover */
+.btn-ai {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 18px;
+  background: linear-gradient(135deg, #0c1a2e 0%, #0e4a6e 100%);
+  color: #22d3ee;
+  border: 1px solid rgba(34, 211, 238, 0.35);
+  border-radius: 8px;
+  font-size: 0.73rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  overflow: hidden;
+  transition: background 0.25s ease, color 0.2s ease, border-color 0.2s, box-shadow 0.25s, transform 0.1s, opacity 0.2s;
+  line-height: 1;
+}
+
+.ai-btn-wrap.running .btn-ai {
+  border-color: transparent;
+}
+
+.btn-ai:hover:not(:disabled) {
+  background: linear-gradient(135deg, #0f9ab8 0%, #22d3ee 100%);
+  color: #0c1a2e;
+  border-color: transparent;
+  box-shadow: 0 4px 18px rgba(34, 211, 238, 0.45);
+}
+
+.btn-ai:active:not(:disabled) {
+  transform: scale(0.96);
+  box-shadow: 0 2px 10px rgba(34, 211, 238, 0.55);
+}
+
+.btn-ai:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn-ai-lg {
+  padding: 11px 22px;
+  font-size: 0.78rem;
+}
+
+/* Spin the icon while AI is running */
+.ai-btn-wrap.running .btn-ai svg {
+  animation: spin 1.2s linear infinite;
+}
+
+/* ── Research Lab: AI Loader ─────────────────────────────────────────────────── */
+
+.ai-loader {
+  background: #0c1a2e;
+  border: 1px solid rgba(34, 211, 238, 0.18);
+  border-radius: 12px;
+  padding: 22px 24px;
+  margin-bottom: 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+.ai-loader-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.ai-loader-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(34, 211, 238, 0.1);
+  border: 1px solid rgba(34, 211, 238, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #22d3ee;
+}
+
+.ai-loader-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: #e2e8f0;
+}
+
+.ai-loader-sub {
+  font-size: 0.69rem;
+  color: rgba(34, 211, 238, 0.55);
+  margin-top: 3px;
+  letter-spacing: 0.02em;
+}
+
+.ai-loader-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-bottom: 18px;
+}
+
+.ai-loader-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+  color: rgba(226, 232, 240, 0.28);
+  transition: color 0.3s;
+}
+
+.ai-loader-step.done   { color: rgba(34, 211, 238, 0.65); }
+.ai-loader-step.active { color: #e2e8f0; }
+
+.ai-loader-step-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(226, 232, 240, 0.12);
+  flex-shrink: 0;
+  transition: background 0.3s, box-shadow 0.3s;
+}
+
+.ai-loader-step.done   .ai-loader-step-dot { background: #22d3ee; }
+.ai-loader-step.active .ai-loader-step-dot {
+  background: #22d3ee;
+  box-shadow: 0 0 6px #22d3ee;
+  animation: ai-dot-pulse 1s ease-in-out infinite;
+}
+
+/* Perplexity-style thin scan line at bottom */
+.ai-scan-line {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1.5px;
+  overflow: hidden;
+}
+
+.ai-scan-line::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  width: 28%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, #22d3ee, transparent);
+  animation: ai-scan-sweep 2s ease-in-out infinite;
 }

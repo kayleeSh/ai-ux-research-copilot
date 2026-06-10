@@ -61,10 +61,7 @@ function AnalyzingLoader() {
         })}
       </div>
       <div className="synthesis-progress-track" style={{ marginTop: 20 }}>
-        <div
-          className="synthesis-progress-bar"
-          style={{ width: `${((step + 1) / UPLOAD_STEPS.length) * 100}%` }}
-        />
+        <div className="synthesis-progress-bar" style={{ width: `${((step + 1) / UPLOAD_STEPS.length) * 100}%` }} />
       </div>
     </div>
   );
@@ -116,6 +113,14 @@ function IconTrash() {
   );
 }
 
+function IconWave() {
+  return (
+    <svg width="14" height="10" viewBox="0 0 14 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="0,5 2,5 4,1 6,9 8,2 10,7 12,5 14,5" />
+    </svg>
+  );
+}
+
 // ── Upload Modal ──────────────────────────────────────────────────────────────
 
 interface UploadModalProps {
@@ -129,6 +134,7 @@ function UploadModal({ onClose, onSuccess }: UploadModalProps) {
   const [text, setText] = useState('');
   const [dragging, setDragging] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [mode, setMode] = useState<'file' | 'text'>('file');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -150,7 +156,8 @@ function UploadModal({ onClose, onSuccess }: UploadModalProps) {
   const handleSubmit = async () => {
     if (!canSubmit) return;
     setError('');
-    setLoading(true);
+    setSubmitting(true);
+    const morphTimer = setTimeout(() => setLoading(true), 400);
     try {
       let result: { id: string };
       if (mode === 'file' && file) {
@@ -158,9 +165,12 @@ function UploadModal({ onClose, onSuccess }: UploadModalProps) {
       } else {
         result = await api.analyzeText(text, title || 'Untitled Interview');
       }
+      clearTimeout(morphTimer);
       onSuccess(result.id);
     } catch (err: unknown) {
+      clearTimeout(morphTimer);
       setError(err instanceof Error ? err.message : 'Something went wrong');
+      setSubmitting(false);
       setLoading(false);
     }
   };
@@ -257,10 +267,17 @@ function UploadModal({ onClose, onSuccess }: UploadModalProps) {
             )}
 
             <div style={{ marginTop: '20px', display: 'flex', gap: '12px', alignItems: 'center' }}>
-              <button className="btn btn-primary" onClick={handleSubmit} disabled={!canSubmit}>
-                ✨ Analyze with AI →
-              </button>
-              <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
+              {submitting ? (
+                <div className="btn-analyze-pill">
+                  <div className="btn-analyze-pill-spinner" />
+                </div>
+              ) : (
+                <button className="btn-analyze" onClick={handleSubmit} disabled={!canSubmit}>
+                  <IconWave />
+                  Analyze with AI
+                </button>
+              )}
+              {!submitting && <button className="btn btn-ghost" onClick={onClose}>Cancel</button>}
             </div>
           </>
         )}

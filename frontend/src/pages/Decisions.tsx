@@ -170,7 +170,7 @@ function DecisionCard({
           {decision.sourceProblemTitle && (
             <>
               <span>Problem:</span>
-              <Link to="/problems" style={{ color: '#4f46e5', textDecoration: 'none', fontWeight: 500 }}>
+              <Link to="/problems" style={{ color: '#0d9488', textDecoration: 'none', fontWeight: 500 }}>
                 {decision.sourceProblemTitle} →
               </Link>
             </>

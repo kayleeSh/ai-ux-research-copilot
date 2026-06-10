@@ -32,6 +32,22 @@ function SectionCard({ title, icon, children }: { title: string; icon: string; c
   );
 }
 
+function IconRefresh() {
+  return (
+    <svg width="11" height="13" viewBox="0 0 12 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="8,1 2.5,7.5 6.5,7.5 4.5,13" />
+    </svg>
+  );
+}
+
+function IconStar() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+      <path d="M6 1v2.5M6 8.5V11M1 6h2.5M8.5 6H11M2.5 2.5L4.2 4.2M7.8 7.8L9.5 9.5M9.5 2.5L7.8 4.2M4.2 7.8L2.5 9.5" />
+    </svg>
+  );
+}
+
 function LogButton({ item, onLog }: { item: string; onLog: (item: string) => Promise<void> }) {
   const [logged, setLogged]   = useState(false);
   const [logging, setLogging] = useState(false);
@@ -45,7 +61,7 @@ function LogButton({ item, onLog }: { item: string; onLog: (item: string) => Pro
       disabled={logging}
       onClick={async () => { setLogging(true); await onLog(item); setLogged(true); }}
       style={{
-        background: '#eef2ff', color: '#4f46e5', border: '1px solid #c7d2fe',
+        background: '#eef2ff', color: '#0d9488', border: '1px solid #99f6e4',
         borderRadius: 8, padding: '7px 16px', fontSize: '0.8rem', fontWeight: 600,
         cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'inherit',
         display: 'flex', alignItems: 'center', gap: 6,
@@ -257,7 +273,7 @@ function ProjectManagerTab({ data, onLog }: { data: Playbook['projectManager']; 
           {data.milestones.map((m, i) => (
             <div key={i} style={{ border: '1px solid #f3f4f6', borderRadius: 8, padding: '10px 12px 0', background: '#fafafa' }}>
               <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', fontSize: '0.875rem', color: '#374151', lineHeight: 1.5 }}>
-                <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#eef2ff', border: '2px solid #818cf8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 700, color: '#4f46e5', flexShrink: 0 }}>
+                <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#eef2ff', border: '2px solid #2dd4bf', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.72rem', fontWeight: 700, color: '#0d9488', flexShrink: 0 }}>
                   {i + 1}
                 </div>
                 <span style={{ paddingTop: 4, flex: 1 }}>{m}</span>
@@ -366,7 +382,7 @@ export default function PlaybookPage() {
           <span style={{ fontSize: '0.78rem', color: '#9ca3af' }}>
             {briefing.problemCount} problem{briefing.problemCount !== 1 ? 's' : ''} · {briefing.interviewCount} interview{briefing.interviewCount !== 1 ? 's' : ''} · Generated {new Date(briefing.generatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
           </span>
-          <Link to="/problems" style={{ fontSize: '0.78rem', color: '#4f46e5', textDecoration: 'none', fontWeight: 500, marginLeft: 'auto' }}>
+          <Link to="/problems" style={{ fontSize: '0.78rem', color: '#0d9488', textDecoration: 'none', fontWeight: 500, marginLeft: 'auto' }}>
             ← View Problem Analysis
           </Link>
         </div>
@@ -403,8 +419,11 @@ export default function PlaybookPage() {
               </div>
             </div>
           ) : (
-            <button className="sidebar-nav-btn" onClick={() => briefing ? setConfirmRegen(true) : handleGenerate()} disabled={generating}>
-              <span>↻</span><span>{generating ? 'Generating…' : 'Regenerate'}</span>
+            <button className="sidebar-nav-btn" onClick={() => briefing ? setConfirmRegen(true) : handleGenerate()} disabled={generating} style={{ color: '#0d9488', fontWeight: 600 }}>
+              <span style={{ display: 'flex', animation: generating ? 'spin 1.2s linear infinite' : undefined }}>
+                <IconRefresh />
+              </span>
+              <span>{generating ? 'Generating…' : 'Regenerate'}</span>
             </button>
           )}
           <Link to="/problems" className="sidebar-nav-btn" style={{ textDecoration: 'none', color: '#6b7280' }}>
@@ -433,9 +452,10 @@ export default function PlaybookPage() {
                 <button className="btn btn-ghost btn-sm" onClick={() => setConfirmRegen(false)}>Cancel</button>
               </div>
             ) : (
-              <button className="btn btn-ghost" onClick={() => briefing ? setConfirmRegen(true) : handleGenerate()} disabled={generating}>
-                {generating ? <><span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} /> Generating…</> : '↻ Regenerate'}
-              </button>
+              <button className="btn btn-outline btn-sm" onClick={() => briefing ? setConfirmRegen(true) : handleGenerate()} disabled={generating}>
+                  <IconRefresh />
+                  {generating ? 'Generating' : 'Regenerate'}
+                </button>
             )}
           </div>
 
@@ -446,12 +466,13 @@ export default function PlaybookPage() {
               <h3>No playbook yet</h3>
               <p>Generate a role playbook from your problem analysis</p>
               <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 12 }}>
-                <button className="btn btn-primary" onClick={handleGenerate} disabled={generating}>
-                  {generating ? 'Generating…' : '✨ Generate Research Playbook'}
-                </button>
+                  <button className="btn btn-primary" onClick={handleGenerate} disabled={generating}>
+                    <IconStar />
+                    {generating ? 'Generating' : 'Generate Research Playbook'}
+                  </button>
+                </div>
                 <Link to="/problems" className="btn btn-ghost">← View Problems First</Link>
               </div>
-            </div>
           ) : (
             <>
               {activeRole === 'pm'             && <PMTab             data={briefing.pm}             onLog={handleLog} />}

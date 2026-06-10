@@ -10,9 +10,16 @@ const REGEN_STEPS = [
   { label: 'Finalizing results',       icon: '✨' },
 ];
 
+function IconRefresh() {
+  return (
+    <svg width="11" height="13" viewBox="0 0 12 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="8,1 2.5,7.5 6.5,7.5 4.5,13" />
+    </svg>
+  );
+}
+
 function RegenerateLoader() {
   const [step, setStep] = useState(0);
-  const [dots, setDots] = useState('');
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -20,28 +27,24 @@ function RegenerateLoader() {
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, []);
 
-  useEffect(() => {
-    const id = setInterval(() => setDots(d => d.length >= 3 ? '' : d + '.'), 400);
-    return () => clearInterval(id);
-  }, []);
-
   return (
-    <div className="regen-loader">
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-        <span style={{ fontSize: '1.4rem', animation: 'float 2s ease-in-out infinite' }}>🤖</span>
-        <span style={{ fontWeight: 600, fontSize: '0.875rem' }}>Regenerating analysis{dots}</span>
+    <div className="ai-loader">
+      <div className="ai-loader-header">
+        <div className="ai-loader-icon"><IconRefresh /></div>
+        <div>
+          <div className="ai-loader-title">regenerating analysis</div>
+          <div className="ai-loader-sub">re-reading transcript and rebuilding</div>
+        </div>
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <div className="ai-loader-steps">
         {REGEN_STEPS.map((s, i) => (
-          <div key={i} className={`analyzing-step ${i < step ? 'done' : i === step ? 'active' : 'pending'}`}
-            style={{ padding: '6px 10px' }}>
-            <div className="analyzing-step-icon" style={{ width: 22, height: 22, fontSize: '0.8rem' }}>
-              {i < step ? '✓' : i === step ? <span className="step-spinner" style={{ width: 13, height: 13 }} /> : s.icon}
-            </div>
-            <span style={{ fontSize: '0.8rem' }}>{s.label}</span>
+          <div key={i} className={`ai-loader-step ${i < step ? 'done' : i === step ? 'active' : ''}`}>
+            <div className="ai-loader-step-dot" />
+            <span>{s.label}</span>
           </div>
         ))}
       </div>
+      <div className="ai-scan-line" />
     </div>
   );
 }
@@ -221,12 +224,13 @@ export default function Workspace() {
               </div>
             ) : (
               <button
-                className="btn btn-ghost btn-sm"
-                onClick={handleRegenerate}
-                disabled={regenerating}
-              >
-                {regenerating ? 'Running…' : '↻ Regenerate'}
-              </button>
+                  className="btn btn-outline btn-sm"
+                  onClick={handleRegenerate}
+                  disabled={regenerating}
+                >
+                  <IconRefresh />
+                  {regenerating ? 'Running' : 'Regenerate'}
+                </button>
             )}
             <button
               className="btn btn-secondary btn-sm"
@@ -246,9 +250,12 @@ export default function Workspace() {
           <div className="empty-state">
             <h3>No analysis yet</h3>
             <p>Click Regenerate to run the AI analysis</p>
-            <button className="btn btn-primary" onClick={handleRegenerate} disabled={regenerating}>
-              {regenerating ? 'Analyzing…' : 'Run Analysis'}
-            </button>
+            <div>
+              <button className="btn btn-primary" onClick={handleRegenerate} disabled={regenerating}>
+                <IconRefresh />
+                {regenerating ? 'Running' : 'Run Analysis'}
+              </button>
+            </div>
           </div>
         ) : (
           <>

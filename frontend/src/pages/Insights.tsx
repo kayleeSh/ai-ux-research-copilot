@@ -100,7 +100,7 @@ function DecisionFromInsightModal({
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#9ca3af', padding: 4, lineHeight: 1 }}>✕</button>
         </div>
         <p style={{ fontSize: '0.8rem', color: '#6b7280', marginBottom: 18 }}>
-          From: <span style={{ color: '#4f46e5', fontWeight: 500 }}>{interview.title}</span>
+          From: <span style={{ color: '#0d9488', fontWeight: 500 }}>{interview.title}</span>
         </p>
 
         {/* Source insight preview */}
@@ -431,7 +431,7 @@ export default function Insights() {
                             className="btn btn-ghost btn-sm"
                             onClick={() => setPendingDecisionInsight(insight)}
                             title="Create Decision from this insight"
-                            style={{ color: '#4f46e5', borderColor: '#c7d2fe' }}
+                            style={{ color: '#0d9488', borderColor: '#99f6e4' }}
                           >
                             + Decision
                           </button>
