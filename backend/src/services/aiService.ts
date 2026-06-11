@@ -1,6 +1,59 @@
 import { AIResult, Cluster, SynthesisResult, SynthesisPattern } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
+// ── AI Model Configuration ────────────────────────────────────────────────────
+//
+// Model: llama-3.1-8b-instant via Groq
+// Fast inference with good structured-output quality for JSON extraction tasks.
+// To improve output quality at the cost of speed, switch to: llama-3.1-70b-versatile
+
+const AI_MODEL = 'llama-3.1-8b-instant';
+
+// temperature controls randomness: 0.0 = deterministic, 1.0 = highly creative.
+// Research tools need factual accuracy over creativity, so we use low values.
+// Each task gets its own value based on how much "interpretation" is acceptable.
+const TEMPERATURE = {
+  EXTRACT:    0.2, // analyze & problems — must stay faithful to what participants said
+  SYNTHESIZE: 0.3, // synthesis & decisions — needs slight flexibility to connect patterns
+  STRATEGIC:  0.4, // briefing — needs variation to tailor language per role
+};
+
+// max_tokens caps the response length. Set per function based on expected output
+// size to prevent truncation (too low) or wasted quota (too high).
+const MAX_TOKENS = {
+  ANALYZE:    2500, // summary + 3-5 quotes + pain points + themes + clusters
+  SYNTHESIZE: 4000, // patterns + differences + recommendations across N interviews
+  DECISIONS:  2000, // 3-5 decisions with title, note, and evidence quotes
+  PROBLEMS:   3000, // root problem + 3-5 problems with descriptions and metadata
+  BRIEFING:   4000, // 4 roles × multiple sections = largest output in the app
+};
+
+// System prompts establish the AI's role and behavioral constraints per task.
+// Separating system from user message gives the model clearer role framing
+// and improves output consistency compared to embedding instructions in the user turn.
+const SYSTEM_PROMPTS = {
+  ANALYZE:
+    'You are a UX research analyst. Extract structured insights from interview transcripts ' +
+    'accurately and faithfully. Do not invent or extrapolate beyond what the participant explicitly said.',
+
+  SYNTHESIZE:
+    'You are a senior UX researcher synthesizing findings across multiple interviews. ' +
+    'Identify genuine cross-participant patterns. Do not overstate consensus — ' +
+    'clearly note where participants diverge.',
+
+  DECISIONS:
+    'You are a senior product manager translating UX research into actionable product decisions. ' +
+    'Every decision must be directly grounded in specific evidence from the research provided.',
+
+  PROBLEMS:
+    'You are a UX researcher identifying core product problems from research data. ' +
+    'Be precise, avoid duplication, and prioritize problems by frequency and user impact.',
+
+  BRIEFING:
+    'You are a product strategist writing role-specific research briefings. ' +
+    'Tailor language, priorities, and framing to each role\'s specific concerns and responsibilities.',
+};
+
 interface AnalyzeResult {
   summary: string;
   keyQuotes: string[];
@@ -128,9 +181,13 @@ async function groqFetch(body: object, timeoutMs = 60000): Promise<Response> {
 async function analyzeWithGroq(transcript: string): Promise<AnalyzeResult> {
   console.log('[groq] analyzing transcript...');
   const res = await groqFetch({
-    model: 'llama-3.1-8b-instant',
-    messages: [{ role: 'user', content: ANALYZE_PROMPT(transcript) }],
-    temperature: 0.3,
+    model: AI_MODEL,
+    messages: [
+      { role: 'system', content: SYSTEM_PROMPTS.ANALYZE },
+      { role: 'user',   content: ANALYZE_PROMPT(transcript) },
+    ],
+    temperature:  TEMPERATURE.EXTRACT,   // low: must be faithful to participant's words
+    max_tokens:   MAX_TOKENS.ANALYZE,
     response_format: { type: 'json_object' }
   });
 
@@ -166,9 +223,13 @@ export async function analyzeTranscriptStream(
 
   console.log('[groq] streaming request...');
   const res = await groqFetch({
-    model: 'llama-3.1-8b-instant',
-    messages: [{ role: 'user', content: ANALYZE_PROMPT(transcript) }],
-    temperature: 0.3,
+    model: AI_MODEL,
+    messages: [
+      { role: 'system', content: SYSTEM_PROMPTS.ANALYZE },
+      { role: 'user',   content: ANALYZE_PROMPT(transcript) },
+    ],
+    temperature:  TEMPERATURE.EXTRACT,   // low: must be faithful to participant's words
+    max_tokens:   MAX_TOKENS.ANALYZE,
     response_format: { type: 'json_object' },
     stream: true
   });
@@ -221,9 +282,13 @@ export async function synthesizeInterviews(
 
   console.log(`[groq] synthesizing ${n} interviews...`);
   const res = await groqFetch({
-    model: 'llama-3.1-8b-instant',
-    messages: [{ role: 'user', content: SYNTHESIS_PROMPT(interviews) }],
-    temperature: 0.3,
+    model: AI_MODEL,
+    messages: [
+      { role: 'system', content: SYSTEM_PROMPTS.SYNTHESIZE },
+      { role: 'user',   content: SYNTHESIS_PROMPT(interviews) },
+    ],
+    temperature:  TEMPERATURE.SYNTHESIZE, // slightly higher: needs flexibility to connect patterns across interviews
+    max_tokens:   MAX_TOKENS.SYNTHESIZE,
     response_format: { type: 'json_object' }
   }, 90000);
 
@@ -383,9 +448,13 @@ export async function generateDecisions(
 
   console.log('[groq] generating decisions...');
   const res = await groqFetch({
-    model: 'llama-3.1-8b-instant',
-    messages: [{ role: 'user', content: DECISIONS_PROMPT(allPain, allQuotes, allThemes) }],
-    temperature: 0.3,
+    model: AI_MODEL,
+    messages: [
+      { role: 'system', content: SYSTEM_PROMPTS.DECISIONS },
+      { role: 'user',   content: DECISIONS_PROMPT(allPain, allQuotes, allThemes) },
+    ],
+    temperature:  TEMPERATURE.SYNTHESIZE, // moderate: decisions need evidence grounding but some interpretive flexibility
+    max_tokens:   MAX_TOKENS.DECISIONS,
     response_format: { type: 'json_object' }
   });
 
@@ -451,9 +520,13 @@ export async function generateDecisionsFromSynthesis(data: {
 
   console.log('[groq] generating decisions from synthesis...');
   const res = await groqFetch({
-    model: 'llama-3.1-8b-instant',
-    messages: [{ role: 'user', content: DECISIONS_FROM_SYNTHESIS_PROMPT(recommendations, prioritizedPainPoints, commonThemes) }],
-    temperature: 0.3,
+    model: AI_MODEL,
+    messages: [
+      { role: 'system', content: SYSTEM_PROMPTS.DECISIONS },
+      { role: 'user',   content: DECISIONS_FROM_SYNTHESIS_PROMPT(recommendations, prioritizedPainPoints, commonThemes) },
+    ],
+    temperature:  TEMPERATURE.SYNTHESIZE, // moderate: converting synthesis recommendations into decisions
+    max_tokens:   MAX_TOKENS.DECISIONS,
     response_format: { type: 'json_object' }
   });
 
@@ -580,9 +653,13 @@ export async function generateProblems(data: {
 
   console.log('[groq] generating problem analysis...');
   const res = await groqFetch({
-    model: 'llama-3.1-8b-instant',
-    messages: [{ role: 'user', content: PROBLEMS_PROMPT(data.interviews) }],
-    temperature: 0.3,
+    model: AI_MODEL,
+    messages: [
+      { role: 'system', content: SYSTEM_PROMPTS.PROBLEMS },
+      { role: 'user',   content: PROBLEMS_PROMPT(data.interviews) },
+    ],
+    temperature:  TEMPERATURE.EXTRACT,   // low: problems must be grounded in actual research data
+    max_tokens:   MAX_TOKENS.PROBLEMS,
     response_format: { type: 'json_object' }
   });
 
@@ -794,9 +871,13 @@ export async function generateBriefing(data: {
   const problemsStr = data.problems.map(p => `- ${p.title}: ${p.description}`).join('\n');
   console.log('[groq] generating role briefing...');
   const res = await groqFetch({
-    model: 'llama-3.1-8b-instant',
-    messages: [{ role: 'user', content: BRIEFING_PROMPT(data.rootProblem, problemsStr, data.painPoints, data.mainThemes, data.decisionTitles) }],
-    temperature: 0.3,
+    model: AI_MODEL,
+    messages: [
+      { role: 'system', content: SYSTEM_PROMPTS.BRIEFING },
+      { role: 'user',   content: BRIEFING_PROMPT(data.rootProblem, problemsStr, data.painPoints, data.mainThemes, data.decisionTitles) },
+    ],
+    temperature:  TEMPERATURE.STRATEGIC, // higher: briefing needs varied language tailored to each role
+    max_tokens:   MAX_TOKENS.BRIEFING,
     response_format: { type: 'json_object' }
   }, 90000);
 
