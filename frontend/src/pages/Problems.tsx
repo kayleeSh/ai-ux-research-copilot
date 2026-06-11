@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../api/client';
 import { ProblemsAnalysis, Problem } from '../types';
 import { NextStepBanner } from '../components/NextStepBanner';
+import { useToast, Toast } from '../components/Toast';
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
@@ -307,6 +308,7 @@ export default function Problems() {
   const [analysis, setAnalysis]   = useState<ProblemsAnalysis | null>(null);
   const [loading, setLoading]     = useState(true);
   const [generating, setGenerating] = useState(false);
+  const { showToast, toastMessage, toastVisible } = useToast();
   const [error, setError]         = useState('');
   const [viewMode, setViewMode]   = useState<ViewMode>('hierarchy');
   const [severityFilter, setSeverityFilter] = useState<string>('all');
@@ -346,6 +348,7 @@ export default function Problems() {
     try {
       const data = await api.generateProblems();
       setAnalysis(data);
+      showToast('✓ Problem analysis ready');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Generation failed');
     } finally {
@@ -584,6 +587,7 @@ export default function Problems() {
           <div style={{ height: 80 }} />
         </main>
       </div>
+      <Toast message={toastMessage} visible={toastVisible} />
     </div>
   );
 }

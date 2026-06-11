@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { useToast, Toast } from '../components/Toast';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client';
 import { Playbook, OKR } from '../types';
@@ -322,6 +323,7 @@ export default function PlaybookPage() {
   const [briefing, setBriefing]       = useState<Playbook | null>(null);
   const [loading, setLoading]         = useState(true);
   const [generating, setGenerating]   = useState(false);
+  const { showToast, toastMessage, toastVisible } = useToast();
   const [error, setError]             = useState('');
   const [activeRole, setActiveRole]   = useState<Role>('pm');
   const [confirmRegen, setConfirmRegen] = useState(false);
@@ -341,6 +343,7 @@ export default function PlaybookPage() {
     try {
       const data = await api.generateBriefing();
       setBriefing(data);
+      showToast('✓ Playbook ready');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Generation failed');
     } finally {
@@ -498,6 +501,7 @@ export default function PlaybookPage() {
           <div style={{ height: 80 }} />
         </main>
       </div>
+      <Toast message={toastMessage} visible={toastVisible} />
     </div>
   );
 }

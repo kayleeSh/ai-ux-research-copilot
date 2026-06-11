@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import { Interview, SynthesisResult } from '../types';
 import { NextStepBanner } from '../components/NextStepBanner';
+import { useToast, Toast } from '../components/Toast';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -146,6 +147,7 @@ export default function Synthesis() {
   const [selected, setSelected]         = useState<Set<string>>(new Set());
   const [loading, setLoading]           = useState(true);
   const [running, setRunning]           = useState(false);
+  const { showToast, toastMessage, toastVisible } = useToast();
   const [result, setResult]             = useState<SynthesisResult | null>(null);
   const [error, setError]               = useState('');
   const [activeSection, setActiveSection] = useState('selector');
@@ -199,6 +201,7 @@ export default function Synthesis() {
     try {
       const synthesis = await api.synthesize(Array.from(selected));
       setResult(synthesis);
+      showToast('✓ Synthesis complete');
       setTimeout(() => scrollToSection('summary'), 400);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Synthesis failed');
@@ -439,6 +442,7 @@ export default function Synthesis() {
           <div style={{ height: 80 }} />
         </main>
       </div>
+      <Toast message={toastMessage} visible={toastVisible} />
     </div>
   );
 }
