@@ -9,7 +9,7 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:3001',
         changeOrigin: true,
-        timeout: 120000  // 2 minutes — allows time for AI to process long transcripts
+        timeout: 180000  // 3 minutes — covers AI call + potential 429 retry wait + response
       }
     }
   }

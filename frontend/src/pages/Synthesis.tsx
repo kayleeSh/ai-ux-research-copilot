@@ -435,6 +435,7 @@ export default function Synthesis() {
                 description="Turn these findings into a structured problem analysis with severity, frequency, and role attribution"
                 to="/problems"
                 buttonText="Go to Problems →"
+                state={{ fromSynthesis: true }}
               />
             </>
           )}

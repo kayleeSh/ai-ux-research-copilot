@@ -6,9 +6,10 @@ interface NextStepBannerProps {
   description: string;
   to: string;
   buttonText: string;
+  state?: Record<string, unknown>;
 }
 
-export function NextStepBanner({ icon, title, description, to, buttonText }: NextStepBannerProps) {
+export function NextStepBanner({ icon, title, description, to, buttonText, state }: NextStepBannerProps) {
   return (
     <div
       className="synthesis-section"
@@ -25,7 +26,7 @@ export function NextStepBanner({ icon, title, description, to, buttonText }: Nex
             <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>{description}</div>
           </div>
         </div>
-        <Link to={to} className="btn btn-primary" style={{ flexShrink: 0, whiteSpace: 'nowrap' }}>
+        <Link to={to} state={state} className="btn btn-primary" style={{ flexShrink: 0, whiteSpace: 'nowrap' }}>
           {buttonText}
         </Link>
       </div>

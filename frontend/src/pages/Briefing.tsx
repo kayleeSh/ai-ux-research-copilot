@@ -331,8 +331,8 @@ export default function PlaybookPage() {
   const load = useCallback(async () => {
     try {
       const data = await api.getBriefing();
-      setBriefing(data);
-    } catch { /* no playbook yet */ }
+      if (data) setBriefing(data);
+    } catch { /* network error */ }
     finally { setLoading(false); }
   }, []);
 

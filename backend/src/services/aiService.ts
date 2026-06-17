@@ -24,7 +24,7 @@ const MAX_TOKENS = {
   ANALYZE:    2500, // summary + 3-5 quotes + pain points + themes + clusters
   SYNTHESIZE: 4000, // patterns + differences + recommendations across N interviews
   DECISIONS:  2000, // 3-5 decisions with title, note, and evidence quotes
-  PROBLEMS:   3000, // root problem + 3-5 problems with descriptions and metadata
+  PROBLEMS:   1500, // root problem + 3-5 problems with descriptions and metadata
   BRIEFING:   4000, // 4 roles × multiple sections = largest output in the app
 };
 
@@ -54,6 +54,200 @@ const SYSTEM_PROMPTS = {
     'Tailor language, priorities, and framing to each role\'s specific concerns and responsibilities.',
 };
 
+// ── JSON Schemas (Structured Output reference) ───────────────────────────────
+// NOTE: json_schema response_format is NOT supported by llama-3.1-8b-instant.
+// These schemas are kept as documentation of expected output structures and
+// can be activated if the model is upgraded to one that supports it
+// (e.g. llama-3.3-70b-versatile). Currently response_format uses json_object.
+// See: https://console.groq.com/docs/structured-outputs#supported-models
+const SCHEMAS = {
+  ANALYZE: {
+    name: 'analyze_result',
+    schema: {
+      type: 'object',
+      properties: {
+        summary:    { type: 'string' },
+        keyQuotes:  { type: 'array', items: { type: 'string' } },
+        painPoints: { type: 'array', items: { type: 'string' } },
+        mainThemes: { type: 'array', items: { type: 'string' } },
+        clusters: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name:        { type: 'string' },
+              description: { type: 'string' },
+              themes:      { type: 'array', items: { type: 'string' } }
+            },
+            required: ['name', 'description', 'themes'],
+            additionalProperties: false
+          }
+        }
+      },
+      required: ['summary', 'keyQuotes', 'painPoints', 'mainThemes', 'clusters'],
+      additionalProperties: false
+    }
+  },
+
+  SYNTHESIS: {
+    name: 'synthesis_result',
+    schema: {
+      type: 'object',
+      properties: {
+        overallSummary:       { type: 'string' },
+        commonThemes:         { type: 'array', items: { type: 'string' } },
+        patterns: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              pattern:     { type: 'string' },
+              description: { type: 'string' },
+              frequency:   { type: 'string' },
+              quotes:      { type: 'array', items: { type: 'string' } }
+            },
+            required: ['pattern', 'description', 'frequency', 'quotes'],
+            additionalProperties: false
+          }
+        },
+        differences:           { type: 'array', items: { type: 'string' } },
+        prioritizedPainPoints: { type: 'array', items: { type: 'string' } },
+        recommendations:       { type: 'array', items: { type: 'string' } }
+      },
+      required: ['overallSummary', 'commonThemes', 'patterns', 'differences', 'prioritizedPainPoints', 'recommendations'],
+      additionalProperties: false
+    }
+  },
+
+  // decisions is wrapped in an object so json_schema can validate it
+  // (json_schema requires a top-level object, not a bare array)
+  DECISIONS: {
+    name: 'decisions_result',
+    schema: {
+      type: 'object',
+      properties: {
+        decisions: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              title:          { type: 'string' },
+              priority:       { type: 'string', enum: ['high', 'medium', 'low'] },
+              note:           { type: 'string' },
+              evidenceQuotes: { type: 'array', items: { type: 'string' } }
+            },
+            required: ['title', 'priority', 'note', 'evidenceQuotes'],
+            additionalProperties: false
+          }
+        }
+      },
+      required: ['decisions'],
+      additionalProperties: false
+    }
+  },
+
+  PROBLEMS: {
+    name: 'problems_result',
+    schema: {
+      type: 'object',
+      properties: {
+        rootProblem: { type: 'string' },
+        problems: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              title:                 { type: 'string' },
+              description:           { type: 'string' },
+              severity:              { type: 'string', enum: ['critical', 'moderate', 'minor'] },
+              affectedRoles:         { type: 'array', items: { type: 'string' } },
+              frequency:             { type: 'string', enum: ['daily', 'per_sprint', 'occasional'] },
+              evidenceQuotes:        { type: 'array', items: { type: 'string' } },
+              parentId:              { type: 'string' },
+              sourceInterviewTitles: { type: 'array', items: { type: 'string' } }
+            },
+            required: ['title', 'description', 'severity', 'affectedRoles', 'frequency', 'evidenceQuotes', 'parentId', 'sourceInterviewTitles'],
+            additionalProperties: false
+          }
+        }
+      },
+      required: ['rootProblem', 'problems'],
+      additionalProperties: false
+    }
+  },
+
+  BRIEFING: {
+    name: 'briefing_result',
+    schema: {
+      type: 'object',
+      properties: {
+        confidence: { type: 'string', enum: ['high', 'medium', 'low'] },
+        pm: {
+          type: 'object',
+          properties: {
+            objectives:          { type: 'array', items: { type: 'string' } },
+            okrs: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  objective:  { type: 'string' },
+                  keyResults: { type: 'array', items: { type: 'string' } }
+                },
+                required: ['objective', 'keyResults'],
+                additionalProperties: false
+              }
+            },
+            priorityStackRank:   { type: 'array', items: { type: 'string' } },
+            assumptionsAndRisks: { type: 'array', items: { type: 'string' } },
+            methodsAndTools:     { type: 'array', items: { type: 'string' } }
+          },
+          required: ['objectives', 'okrs', 'priorityStackRank', 'assumptionsAndRisks', 'methodsAndTools'],
+          additionalProperties: false
+        },
+        designer: {
+          type: 'object',
+          properties: {
+            userNeeds:        { type: 'array', items: { type: 'string' } },
+            jobsToBeDone:     { type: 'array', items: { type: 'string' } },
+            designPrinciples: { type: 'array', items: { type: 'string' } },
+            deliverables:     { type: 'array', items: { type: 'string' } },
+            successCriteria:  { type: 'array', items: { type: 'string' } }
+          },
+          required: ['userNeeds', 'jobsToBeDone', 'designPrinciples', 'deliverables', 'successCriteria'],
+          additionalProperties: false
+        },
+        developer: {
+          type: 'object',
+          properties: {
+            deliverables:         { type: 'array', items: { type: 'string' } },
+            acceptanceCriteria:   { type: 'array', items: { type: 'string' } },
+            technicalConstraints: { type: 'array', items: { type: 'string' } },
+            dependencies:         { type: 'array', items: { type: 'string' } },
+            nonGoals:             { type: 'array', items: { type: 'string' } }
+          },
+          required: ['deliverables', 'acceptanceCriteria', 'technicalConstraints', 'dependencies', 'nonGoals'],
+          additionalProperties: false
+        },
+        projectManager: {
+          type: 'object',
+          properties: {
+            deliverables:    { type: 'array', items: { type: 'string' } },
+            milestones:      { type: 'array', items: { type: 'string' } },
+            dependenciesMap: { type: 'array', items: { type: 'string' } },
+            effortEstimates: { type: 'array', items: { type: 'string' } },
+            openQuestions:   { type: 'array', items: { type: 'string' } }
+          },
+          required: ['deliverables', 'milestones', 'dependenciesMap', 'effortEstimates', 'openQuestions'],
+          additionalProperties: false
+        }
+      },
+      required: ['confidence', 'pm', 'designer', 'developer', 'projectManager'],
+      additionalProperties: false
+    }
+  }
+};
+
 interface AnalyzeResult {
   summary: string;
   keyQuotes: string[];
@@ -64,21 +258,51 @@ interface AnalyzeResult {
 
 // ── Prompts ──────────────────────────────────────────────────────────────────
 
-const ANALYZE_PROMPT = (transcript: string) => `You are a senior UX research analyst. Analyze the following interview transcript and return ONLY a valid JSON object with this exact structure — no markdown, no explanation:
+// Few-Shot example teaches the model what "good" output looks like before it sees real data.
+// Chain-of-Thought step 1 asks the model to reason about quality before extracting,
+// reducing generic/vague outputs (a common failure mode for this task).
+const ANALYZE_PROMPT = (transcript: string) => `## Step 1 — Reason before extracting (Chain-of-Thought)
+Briefly identify before writing JSON:
+1. What is the participant's PRIMARY frustration? → anchors the summary
+2. Which quotes are verbatim vs paraphrased? → only verbatim belong in keyQuotes
+3. Are the pain points specific and actionable, or still generic? → make them specific
 
+## Step 2 — Reference example (Few-Shot)
+Input excerpt:
+"I open five different apps just to figure out what changed — Slack, Jira, Notion, email...
+By the time I've caught up I've lost an hour. And the Notion docs are out of date anyway.
+I just want one place where I can see everything that matters to me."
+
+Expected output:
 {
-  "summary": "2-3 sentence synthesis of key findings",
-  "keyQuotes": ["verbatim or near-verbatim quote", "..."],
-  "painPoints": ["specific pain point", "..."],
-  "mainThemes": ["theme label", "..."],
+  "summary": "Participant loses 1+ hour daily aggregating information across 5 disconnected tools. Core desire is a single unified workspace surfacing only what is relevant.",
+  "keyQuotes": [
+    "I open five different apps just to figure out what changed",
+    "by the time I've caught up I've lost an hour",
+    "I just want one place where I can see everything that matters to me"
+  ],
+  "painPoints": [
+    "Morning catch-up requires opening 5+ apps before any productive work begins",
+    "Notion documentation is frequently stale, forcing manual cross-referencing",
+    "No unified view causes 1-hour daily productivity loss"
+  ],
+  "mainThemes": ["Tool fragmentation", "Morning overhead", "Information reliability", "Unified workspace"],
   "clusters": [
     {
-      "name": "Cluster Name",
-      "description": "One sentence describing what unifies this cluster",
-      "themes": ["theme1", "theme2"]
+      "name": "Daily Overhead Tax",
+      "description": "Time lost to tool-switching before productive work can begin",
+      "themes": ["Tool fragmentation", "Morning overhead"]
+    },
+    {
+      "name": "Information Reliability Gap",
+      "description": "Stale documentation forces manual verification at every decision point",
+      "themes": ["Information reliability", "Unified workspace"]
     }
   ]
 }
+
+## Step 3 — Analyze this transcript
+Return ONLY valid JSON — no markdown, no explanation, no reasoning text.
 
 Rules:
 - keyQuotes: 3-5 direct quotes from the participant
@@ -89,9 +313,20 @@ Rules:
 Transcript:
 ${transcript}`;
 
-const SYNTHESIS_PROMPT = (interviews: Array<{ title: string; transcript: string }>) =>
-  `You are a senior UX research analyst conducting a cross-interview synthesis.
-Analyze ALL the following interview transcripts together to find patterns across participants.
+// Synthesis uses extracted aiResult fields (summary, quotes, pain points, themes) instead of
+// raw transcripts. This reduces tokens per interview from ~1500 to ~250, preventing rate limit
+// errors on Groq's free tier and making synthesis much faster regardless of transcript length.
+interface SynthesisInput {
+  id: string;
+  title: string;
+  summary: string;
+  keyQuotes: string[];
+  painPoints: string[];
+  mainThemes: string[];
+}
+
+const SYNTHESIS_PROMPT = (interviews: SynthesisInput[]) =>
+  `Analyze these extracted research findings from ${interviews.length} interviews to find cross-participant patterns.
 
 Return ONLY a valid JSON object — no markdown, no explanation:
 
@@ -118,7 +353,13 @@ Rules:
 - prioritizedPainPoints: top 4-6 pain points by frequency
 - recommendations: 3-5 concrete, actionable recommendations
 
-${interviews.map((iv, i) => `--- Interview ${i + 1}: ${iv.title} ---\n${iv.transcript}`).join('\n\n')}`;
+${interviews.map((iv, i) => `--- Interview ${i + 1}: ${iv.title} ---
+Summary: ${iv.summary}
+Pain Points:
+${iv.painPoints.slice(0, 6).map(p => `• ${p}`).join('\n')}
+Key Quotes:
+${iv.keyQuotes.slice(0, 4).map(q => `• ${q}`).join('\n')}
+Themes: ${iv.mainThemes.join(', ')}`).join('\n\n')}`;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -157,19 +398,37 @@ function buildResult(parsed: RawParsed): AnalyzeResult {
   };
 }
 
-async function groqFetch(body: object, timeoutMs = 60000): Promise<Response> {
+async function groqFetch(body: object, timeoutMs = 150000): Promise<Response> {
   const controller = new AbortController();
+  // 150s covers up to 3 rate-limit waits (~30s each) plus actual API response time
   const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  const doFetch = () => fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${process.env.GROQ_API_KEY}`
+    },
+    body: JSON.stringify(body),
+    signal: controller.signal
+  });
+
   try {
-    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`
-      },
-      body: JSON.stringify(body),
-      signal: controller.signal
-    });
+    let res = await doFetch();
+
+    // Retry up to 3 times on rate limit (429).
+    // Each response tells us exactly how long to wait via "try again in X.XXs".
+    // We use that value + 2s buffer so the window is clear before the next attempt.
+    for (let attempt = 1; attempt <= 3 && res.status === 429; attempt++) {
+      const errBody = await res.json() as { error?: { message?: string } };
+      const msg = errBody.error?.message ?? '';
+      const match = msg.match(/try again in ([\d.]+)s/);
+      const waitMs = match ? (parseFloat(match[1]) + 2) * 1000 : (15 + attempt * 10) * 1000;
+      console.log(`[groq] rate limited (attempt ${attempt}/3) — retrying in ${(waitMs / 1000).toFixed(1)}s...`);
+      await new Promise(r => setTimeout(r, waitMs));
+      res = await doFetch();
+    }
+
     return res;
   } finally {
     clearTimeout(timer);
@@ -271,7 +530,7 @@ export async function analyzeTranscriptStream(
 // ── Cross-Interview Synthesis ─────────────────────────────────────────────────
 
 export async function synthesizeInterviews(
-  interviews: Array<{ id: string; title: string; transcript: string }>
+  interviews: SynthesisInput[]
 ): Promise<SynthesisResult> {
   const n = interviews.length;
 
@@ -290,7 +549,7 @@ export async function synthesizeInterviews(
     temperature:  TEMPERATURE.SYNTHESIZE, // slightly higher: needs flexibility to connect patterns across interviews
     max_tokens:   MAX_TOKENS.SYNTHESIZE,
     response_format: { type: 'json_object' }
-  }, 90000);
+  }, 120000);
 
   if (!res.ok) throw new Error(`Groq synthesis ${res.status}: ${await res.text()}`);
   const data = await res.json() as { choices: Array<{ message: { content: string } }> };
@@ -376,27 +635,43 @@ interface RawDecision {
   evidenceQuotes?: string[];
 }
 
+// Few-Shot example shows the model what a high-quality decision looks like vs a vague one.
+// Prompts now return { decisions: [...] } to match the DECISIONS json_schema (top-level object required).
 const DECISIONS_PROMPT = (
   painPoints: string[],
   quotes: string[],
   themes: string[]
-) => `You are a senior product manager. Based on these UX research findings, generate actionable product decisions.
+) => `## Quality standard for decision titles (Few-Shot)
+Good: "Build unified morning briefing view to eliminate multi-tool catch-up overhead"
+  → Verb-first, specific solution, directly linked to a concrete pain point
+Bad: "Fix the dashboard" or "Improve information access"
+  → Too vague, no solution direction, not actionable
 
-Return ONLY a valid JSON array with no markdown, no explanation:
+## Example output
+{
+  "decisions": [
+    {
+      "title": "Build unified morning briefing view to eliminate multi-tool catch-up overhead",
+      "priority": "high",
+      "note": "Participants consistently report losing 1+ hour daily to information aggregation. A consolidated view directly addresses the highest-frequency pain point.",
+      "evidenceQuotes": ["I open five different apps just to figure out what changed", "by the time I've caught up I've lost an hour"]
+    },
+    {
+      "title": "Implement real-time documentation sync to prevent stale information drift",
+      "priority": "medium",
+      "note": "Multiple participants treat documentation as untrustworthy, adding a manual verification step to every cross-team interaction.",
+      "evidenceQuotes": ["the Notion docs are out of date anyway"]
+    }
+  ]
+}
 
-[
-  {
-    "title": "Actionable decision starting with a verb, specific, 8-15 words",
-    "priority": "high",
-    "note": "1-2 sentence rationale linking directly to a research finding",
-    "evidenceQuotes": ["exact quote or pain point from the research"]
-  }
-]
+## Generate decisions from these findings
+Return ONLY valid JSON with a "decisions" array — no markdown, no explanation.
 
 Rules:
 - Generate 3-5 decisions
-- title: verb-first and specific (e.g. "Redesign onboarding to reduce context-switching overhead")
-- priority: "high" (core workflow impact), "medium" (UX improvement), or "low" (enhancement)
+- title: verb-first and specific (8-15 words)
+- priority: "high" (core workflow impact) | "medium" (UX improvement) | "low" (enhancement)
 - evidenceQuotes: 1-2 direct quotes or pain points as evidence
 
 Pain Points:
@@ -471,27 +746,37 @@ export async function generateDecisions(
 
 // ── Decisions from Synthesis ──────────────────────────────────────────────────
 
+// Chain-of-Thought asks the model to reason about priority before assigning it,
+// reducing "everything is high priority" collapse that's common without this step.
+// Also wrapped in { decisions: [...] } to match the DECISIONS json_schema.
 const DECISIONS_FROM_SYNTHESIS_PROMPT = (
   recommendations: string[],
   painPoints: string[],
   themes: string[]
-) => `You are a senior product manager converting synthesis recommendations into trackable product decisions.
+) => `## Step 1 — Reason before converting (Chain-of-Thought)
+For each recommendation, consider:
+- What specific outcome does this recommendation enable for the user?
+- Is the impact "high" (blocks core workflow), "medium" (UX improvement), or "low" (enhancement)?
+- What is the single most compelling evidence point from the pain points below?
 
-Return ONLY a valid JSON array with no markdown:
-
-[
-  {
-    "title": "Actionable decision starting with a verb (8-15 words)",
-    "priority": "high|medium|low",
-    "note": "1-2 sentence rationale based on the recommendation",
-    "evidenceQuotes": ["the recommendation or pain point this is based on"]
-  }
-]
+## Step 2 — Convert recommendations to decisions
+Return ONLY valid JSON with a "decisions" array — no markdown, no explanation.
 
 Rules:
 - Generate exactly one decision per recommendation
-- title: verb-first and specific
-- priority: high (core workflow), medium (UX improvement), low (enhancement)
+- title: verb-first and specific (8-15 words)
+- priority: "high" | "medium" | "low"
+
+{
+  "decisions": [
+    {
+      "title": "Actionable decision starting with a verb (8-15 words)",
+      "priority": "high|medium|low",
+      "note": "1-2 sentence rationale based on the recommendation",
+      "evidenceQuotes": ["the recommendation or pain point this is based on"]
+    }
+  ]
+}
 
 Recommendations to convert:
 ${recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
@@ -561,43 +846,39 @@ interface RawProblemsResult {
 
 type InterviewInput = { title: string; painPoints: string[]; keyQuotes: string[]; mainThemes: string[] };
 
+// Chain-of-Thought guides the model to distinguish root causes from symptoms before writing JSON —
+// the most common failure mode is listing symptoms (e.g. "can't find file") as top-level problems.
+// Few-Shot example shows what a good vs bad problem entry looks like.
 const PROBLEMS_PROMPT = (interviews: InterviewInput[]) =>
-  `You are a senior UX researcher. Identify core product problems from these labeled research findings.
+  `Analyze the UX research data below and return a JSON object with exactly these two keys:
+- "rootProblem": one sentence naming the single underlying cause connecting most problems
+- "problems": array of 3-5 problem objects
 
-Each pain point and quote is prefixed with [Interview Title] so you know exactly which interview it came from.
+Each problem object must have exactly these keys:
+- "title": short name (under 10 words)
+- "description": 2-3 sentences explaining the problem and its downstream impact
+- "severity": "critical" | "moderate" | "minor"
+- "affectedRoles": array using only these values: "researcher" | "pm" | "designer" | "developer" | "project_manager"
+- "frequency": "daily" | "per_sprint" | "occasional"
+- "evidenceQuotes": array of 1-2 direct quotes from the research data below
+- "parentId": empty string "" (unless this is a sub-problem of another listed problem, then use that problem's title)
+- "sourceInterviewTitles": array of exact interview title(s) this problem comes from
 
-Return ONLY a valid JSON object:
-{
-  "rootProblem": "One sentence systemic root cause underlying all specific problems",
-  "problems": [
-    {
-      "title": "Problem title (5-8 words)",
-      "description": "2-3 sentence description of the problem and its impact",
-      "severity": "critical",
-      "affectedRoles": ["researcher", "pm", "designer", "developer", "project_manager"],
-      "frequency": "daily",
-      "evidenceQuotes": ["direct quote supporting this problem"],
-      "parentId": "",
-      "sourceInterviewTitles": ["Exact interview title this problem is drawn from"]
-    }
-  ]
-}
+Good problem description example:
+"Teams maintain parallel copies across Slack, Jira, and Notion. This creates version conflicts and forces manual reconciliation before every meeting. The result is decisions made on stale data."
 
-Rules:
-- Generate 3-5 problems maximum
-- severity: "critical" (blocks core workflow) | "moderate" (significant friction) | "minor" (nice to fix)
-- affectedRoles: include only roles genuinely impacted
-- frequency: "daily" | "per_sprint" | "occasional"
-- parentId: if a problem is a sub-problem, set to the parent problem's title; otherwise leave empty
-- evidenceQuotes: 1-2 direct quotes from the labeled input below
-- sourceInterviewTitles: list ONLY the exact interview title(s) whose pain points or quotes this problem is based on
+Bad problem description (too vague — do not do this):
+"Users have issues finding information."
 
-${interviews.map(iv => `--- Interview: ${iv.title} ---
-Pain Points:
-${iv.painPoints.slice(0, 6).map(p => `[${iv.title}]: ${p}`).join('\n')}
-Key Quotes:
-${iv.keyQuotes.slice(0, 5).map(q => `[${iv.title}]: ${q}`).join('\n')}
-Themes: ${iv.mainThemes.join(', ')}`).join('\n\n')}`;
+Severity guide: critical = blocks core workflow | moderate = significant friction | minor = improvement opportunity
+
+Research data:
+${interviews.map(iv => `=== ${iv.title} ===
+Pain points: ${iv.painPoints.slice(0, 5).join(' | ')}
+Quotes: ${iv.keyQuotes.slice(0, 4).join(' | ')}
+Themes: ${iv.mainThemes.join(', ')}`).join('\n\n')}
+
+Return ONLY the JSON object. No explanation, no markdown, no extra keys.`;
 
 function mockGenerateProblems(interviews: InterviewInput[]): RawProblemsResult {
   const allThemes = [...new Set(interviews.flatMap(iv => iv.mainThemes))];
@@ -668,6 +949,7 @@ export async function generateProblems(data: {
   const content = responseData.choices[0]?.message?.content;
   if (!content) throw new Error('No content in response');
   console.log('[groq] problem analysis complete');
+  console.log('[groq] raw problems JSON:', content.slice(0, 300));
   return JSON.parse(content) as RawProblemsResult;
 }
 
@@ -705,9 +987,18 @@ interface RawBriefing {
   };
 }
 
+// Chain-of-Thought asks the model to reason about each role's distinct concerns before generating,
+// preventing outputs where every role gets generic identical-sounding content.
 const BRIEFING_PROMPT = (rootProblem: string, problems: string, painPoints: string[], themes: string[], decisions: string[]) =>
-  `You are a senior product strategist. Generate role-specific strategic outputs from UX research findings.
+  `## Step 1 — Role-based reasoning (Chain-of-Thought)
+Before generating outputs, reason through each role's distinct concerns:
+- PM: What measurable outcomes matter? What should ship first and why does order matter?
+- Designer: What must the user be able to do? What friction must be eliminated entirely?
+- Developer: What specifically needs to be built? What must NOT be built to prevent scope creep?
+- Project Manager: What is the realistic sequence? What blocks what?
+Generate each role's section independently with these concerns in mind.
 
+## Step 2 — Generate the role briefing
 Return ONLY a valid JSON object with these exact keys:
 {
   "confidence": "high|medium|low",
@@ -879,7 +1170,7 @@ export async function generateBriefing(data: {
     temperature:  TEMPERATURE.STRATEGIC, // higher: briefing needs varied language tailored to each role
     max_tokens:   MAX_TOKENS.BRIEFING,
     response_format: { type: 'json_object' }
-  }, 90000);
+  }, 120000);
 
   if (!res.ok) throw new Error(`Groq briefing ${res.status}: ${await res.text()}`);
   const responseData = await res.json() as { choices: Array<{ message: { content: string } }> };

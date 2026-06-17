@@ -8,8 +8,7 @@ export const problemsRouter = Router();
 
 problemsRouter.get('/', (_req: Request, res: Response): void => {
   const analysis = storage.getProblemsAnalysis();
-  if (!analysis) { res.status(404).json({ error: 'No problems analysis yet' }); return; }
-  res.json(analysis);
+  res.json(analysis ?? null);
 });
 
 problemsRouter.post('/generate', async (req: Request, res: Response): Promise<void> => {
@@ -20,6 +19,7 @@ problemsRouter.post('/generate', async (req: Request, res: Response): Promise<vo
       return;
     }
 
+    console.log(`[problems] generating from ${interviews.length} interview(s):`, interviews.map(iv => iv.title));
     const titleToId = new Map(interviews.map(iv => [iv.title, iv.id]));
 
     const raw = await generateProblems({
@@ -30,6 +30,12 @@ problemsRouter.post('/generate', async (req: Request, res: Response): Promise<vo
         mainThemes: iv.aiResult!.mainThemes
       }))
     });
+
+    console.log('[problems] AI returned rootProblem:', raw.rootProblem);
+    console.log('[problems] AI returned problems count:', (raw.problems ?? []).length);
+    if ((raw.problems ?? []).length === 0) {
+      console.warn('[problems] WARNING: AI returned empty problems array — check the prompt or rate limit');
+    }
 
     const now = new Date().toISOString();
     const analysis = storage.saveProblemsAnalysis({

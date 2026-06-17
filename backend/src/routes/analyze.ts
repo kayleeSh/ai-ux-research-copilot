@@ -207,15 +207,24 @@ analyzeRouter.post('/synthesize', async (req: Request, res: Response): Promise<v
 
     const interviews = interviewIds
       .map(id => storage.getInterview(id))
-      .filter((iv): iv is Interview => !!iv);
+      .filter((iv): iv is Interview => !!iv && !!iv.aiResult);
 
     if (interviews.length < 2) {
-      res.status(400).json({ error: 'Could not find enough valid interviews' });
+      res.status(400).json({ error: 'Could not find enough analyzed interviews. Make sure both interviews have been analyzed first.' });
       return;
     }
 
+    // Pass extracted aiResult fields instead of full transcripts — reduces tokens per
+    // interview from ~1500 to ~250, preventing rate limit errors on Groq's free tier.
     const result = await synthesizeInterviews(
-      interviews.map(iv => ({ id: iv.id, title: iv.title, transcript: iv.transcript }))
+      interviews.map(iv => ({
+        id:         iv.id,
+        title:      iv.title,
+        summary:    iv.aiResult!.summary,
+        keyQuotes:  iv.aiResult!.keyQuotes,
+        painPoints: iv.aiResult!.painPoints,
+        mainThemes: iv.aiResult!.mainThemes,
+      }))
     );
     res.json(result);
   } catch (err: unknown) {

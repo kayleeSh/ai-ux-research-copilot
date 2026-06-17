@@ -7,8 +7,7 @@ export const briefingRouter = Router();
 
 briefingRouter.get('/', (_req: Request, res: Response): void => {
   const briefing = storage.getBriefing();
-  if (!briefing) { res.status(404).json({ error: 'No briefing yet' }); return; }
-  res.json(briefing);
+  res.json(briefing ?? null);
 });
 
 briefingRouter.post('/generate', async (req: Request, res: Response): Promise<void> => {

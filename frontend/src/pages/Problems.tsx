@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { api } from '../api/client';
 import { ProblemsAnalysis, Problem } from '../types';
 import { NextStepBanner } from '../components/NextStepBanner';
@@ -305,6 +305,9 @@ function PriorityView({ problems, onStatusChange }: { problems: Problem[]; onSta
 // ── Main Page ──────────────────────────────────────────────────────────────────
 
 export default function Problems() {
+  const location = useLocation();
+  const fromSynthesis = !!(location.state as { fromSynthesis?: boolean } | null)?.fromSynthesis;
+
   const [analysis, setAnalysis]   = useState<ProblemsAnalysis | null>(null);
   const [loading, setLoading]     = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -319,8 +322,8 @@ export default function Problems() {
   const load = useCallback(async () => {
     try {
       const data = await api.getProblems();
-      setAnalysis(data);
-    } catch { /* no analysis yet */ }
+      if (data) setAnalysis(data);
+    } catch { /* network error */ }
     finally { setLoading(false); }
   }, []);
 
@@ -503,12 +506,41 @@ export default function Problems() {
             </div>
           </div>
 
-          {error && <div className="error-msg">{error}</div>}
+          {error && (
+            <div style={{
+              background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 10,
+              padding: '16px 20px', marginBottom: 20, display: 'flex',
+              alignItems: 'flex-start', gap: 12
+            }}>
+              <span style={{ fontSize: '1.2rem', flexShrink: 0 }}>⚠️</span>
+              <div style={{ flex: 1 }}>
+                <p style={{ margin: 0, fontWeight: 600, color: '#b91c1c', fontSize: '0.9rem' }}>
+                  Generation failed
+                </p>
+                <p style={{ margin: '4px 0 12px', color: '#dc2626', fontSize: '0.82rem' }}>
+                  {error}
+                </p>
+                <button className="btn-analyze btn-analyze-sm" onClick={handleGenerate} disabled={generating}>
+                  <IconRefresh />
+                  {generating ? 'Retrying…' : 'Try again'}
+                </button>
+              </div>
+            </div>
+          )}
 
           {!analysis ? (
             <div className="empty-state">
-              <h3>No problem analysis yet</h3>
-              <p>Generate a problem analysis from your research interviews</p>
+              {fromSynthesis ? (
+                <>
+                  <h3>Your synthesis is ready</h3>
+                  <p>Click Generate to identify core problems from your research findings</p>
+                </>
+              ) : (
+                <>
+                  <h3>No problem analysis yet</h3>
+                  <p>Generate a problem analysis from your research interviews</p>
+                </>
+              )}
               <div style={{ marginTop: 12 }}>
                 {generating ? (
                   <div className="btn-analyze-pill"><div className="btn-analyze-pill-spinner" /></div>
@@ -563,8 +595,20 @@ export default function Problems() {
               {/* Problems */}
               {filteredProblems.length === 0 ? (
                 <div className="empty-state" style={{ padding: '32px 0' }}>
-                  <p>No problems match the current filters</p>
-                  <button className="btn btn-ghost btn-sm" style={{ marginTop: 8 }} onClick={() => { setSeverityFilter('all'); setRoleFilter('all'); }}>Clear Filters</button>
+                  {analysis.problems.length === 0 ? (
+                    <>
+                      <p>No problems were identified — try regenerating with more interview data</p>
+                      <button className="btn-analyze" style={{ marginTop: 12 }} onClick={handleGenerate} disabled={generating}>
+                        <IconStar />
+                        {generating ? 'Generating…' : 'Regenerate'}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <p>No problems match the current filters</p>
+                      <button className="btn btn-ghost btn-sm" style={{ marginTop: 8 }} onClick={() => { setSeverityFilter('all'); setRoleFilter('all'); }}>Clear Filters</button>
+                    </>
+                  )}
                 </div>
               ) : viewMode === 'hierarchy' ? (
                 <HierarchyView problems={filteredProblems} onStatusChange={handleStatusChange} />
