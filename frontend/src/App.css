@@ -291,6 +291,62 @@ body {
   border-radius: 4px;
 }
 
+/* ── TPM info icon + tooltip ──────────────────────────────── */
+.tpm-info {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.tpm-info-icon {
+  font-size: 0.72rem;
+  color: #9ca3af;
+  cursor: default;
+  line-height: 1;
+  user-select: none;
+  transition: color 0.15s;
+}
+
+.tpm-info:hover .tpm-info-icon {
+  color: #6b7280;
+}
+
+.tpm-tooltip {
+  display: none;
+  position: absolute;
+  top: calc(100% + 12px);
+  right: -8px;
+  width: 240px;
+  background: #1f2937;
+  color: #f9fafb;
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  z-index: 9999;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+  pointer-events: none;
+}
+
+.tpm-info:hover .tpm-tooltip {
+  display: block;
+}
+
+.tpm-tooltip-arrow {
+  position: absolute;
+  top: -5px;
+  right: 14px;
+  width: 10px;
+  height: 10px;
+  background: #1f2937;
+  transform: rotate(45deg);
+  border-radius: 2px;
+}
+
+.tpm-tooltip p {
+  margin: 0 0 8px;
+}
+
 .error-msg {
   background: #fef2f2;
   border: 1px solid #fca5a5;

@@ -138,7 +138,6 @@ function UploadModal({ onClose, onSuccess }: UploadModalProps) {
   const [error, setError] = useState('');
   const [mode, setMode] = useState<'file' | 'text'>('file');
   const inputRef = useRef<HTMLInputElement>(null);
-
   const handleDrop = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setDragging(false);
