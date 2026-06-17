@@ -469,19 +469,28 @@ export default function PlaybookPage() {
           {!briefing ? (
             <div className="empty-state">
               <h3>No playbook yet</h3>
-              <p>Generate a role playbook from your problem analysis</p>
-              <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 12 }}>
-                  {generating ? (
-                    <div className="btn-analyze-pill"><div className="btn-analyze-pill-spinner" /></div>
-                  ) : (
-                    <button className="btn-analyze" onClick={handleGenerate}>
-                      <IconStar />
-                      Generate Research Playbook
-                    </button>
-                  )}
-                </div>
-                <Link to="/problems" className="btn btn-ghost">← View Problems First</Link>
+              <p>
+                The playbook synthesizes your problem analysis into role-specific action plans
+                for PM, Designer, Developer, and Project Manager.
+              </p>
+              <div style={{
+                background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8,
+                padding: '10px 16px', margin: '8px 0 16px', fontSize: '0.82rem', color: '#166534'
+              }}>
+                Requires a completed Problem Analysis — generate that first if you haven't yet.
               </div>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+                {generating ? (
+                  <div className="btn-analyze-pill"><div className="btn-analyze-pill-spinner" /></div>
+                ) : (
+                  <button className="btn-analyze" onClick={handleGenerate}>
+                    <IconStar />
+                    Generate Research Playbook
+                  </button>
+                )}
+                <Link to="/problems" className="btn btn-ghost">← View Problem Analysis</Link>
+              </div>
+            </div>
           ) : (
             <>
               {activeRole === 'pm'             && <PMTab             data={briefing.pm}             onLog={handleLog} />}

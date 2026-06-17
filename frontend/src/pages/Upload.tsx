@@ -295,6 +295,7 @@ export default function Upload() {
   const [showModal, setShowModal] = useState(false);
 
   const fetchInterviews = useCallback(() => {
+    const start = Date.now();
     api.getInterviews()
       .then(data => {
         const sorted = [...data].sort(
@@ -302,7 +303,11 @@ export default function Upload() {
         );
         setInterviews(sorted);
       })
-      .finally(() => setLoadingTable(false));
+      .finally(() => {
+        const elapsed = Date.now() - start;
+        const remaining = Math.max(0, 600 - elapsed);
+        setTimeout(() => setLoadingTable(false), remaining);
+      });
   }, []);
 
   useEffect(() => { fetchInterviews(); }, [fetchInterviews]);
@@ -393,9 +398,27 @@ export default function Upload() {
 
         {/* Body */}
         {loadingTable ? (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: 48 }}>
-            <div className="spinner" />
-          </div>
+          <>
+            {[...Array(4)].map((_, i) => (
+              <div key={i} style={{
+                display: 'grid',
+                gridTemplateColumns: '36px 1fr 130px 90px 60px 70px 100px 340px',
+                padding: '14px 20px',
+                borderBottom: '1px solid #f3f4f6',
+                gap: 8,
+                alignItems: 'center',
+              }}>
+                <div className="skeleton" style={{ width: 18, height: 13 }} />
+                <div className="skeleton" style={{ width: `${55 + (i * 11) % 30}%`, height: 13 }} />
+                <div className="skeleton" style={{ width: 95, height: 13 }} />
+                <div className="skeleton" style={{ width: 48, height: 13 }} />
+                <div className="skeleton" style={{ width: 28, height: 13 }} />
+                <div className="skeleton" style={{ width: 32, height: 13 }} />
+                <div className="skeleton" style={{ width: 68, height: 22, borderRadius: 100 }} />
+                <div className="skeleton" style={{ width: '55%', height: 13 }} />
+              </div>
+            ))}
+          </>
         ) : interviews.length === 0 ? (
           <div className="empty-state">
             <h3>No interviews yet</h3>
