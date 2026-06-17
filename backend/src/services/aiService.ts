@@ -1,5 +1,6 @@
 import { AIResult, Cluster, SynthesisResult, SynthesisPattern } from '../types';
 import { v4 as uuidv4 } from 'uuid';
+import { recordTokenUsage } from './storageService';
 
 // ── AI Model Configuration ────────────────────────────────────────────────────
 //
@@ -398,6 +399,18 @@ function buildResult(parsed: RawParsed): AnalyzeResult {
   };
 }
 
+// Parses a non-streaming Groq response, records token usage, and returns the text content.
+async function parseGroqJson(res: Response): Promise<string> {
+  const data = await res.json() as {
+    choices: Array<{ message: { content: string } }>;
+    usage?: { total_tokens?: number };
+  };
+  if (data.usage?.total_tokens) recordTokenUsage(data.usage.total_tokens);
+  const content = data.choices[0]?.message?.content;
+  if (!content) throw new Error('No content in response');
+  return content;
+}
+
 async function groqFetch(body: object, timeoutMs = 150000): Promise<Response> {
   const controller = new AbortController();
   // 150s covers up to 3 rate-limit waits (~30s each) plus actual API response time
@@ -451,9 +464,7 @@ async function analyzeWithGroq(transcript: string): Promise<AnalyzeResult> {
   });
 
   if (!res.ok) throw new Error(`Groq ${res.status}: ${await res.text()}`);
-  const data = await res.json() as { choices: Array<{ message: { content: string } }> };
-  const content = data.choices[0]?.message?.content;
-  if (!content) throw new Error('No content in Groq response');
+  const content = await parseGroqJson(res);
   console.log('[groq] response received');
   return buildResult(JSON.parse(content) as RawParsed);
 }
@@ -552,10 +563,7 @@ export async function synthesizeInterviews(
   }, 120000);
 
   if (!res.ok) throw new Error(`Groq synthesis ${res.status}: ${await res.text()}`);
-  const data = await res.json() as { choices: Array<{ message: { content: string } }> };
-  const content = data.choices[0]?.message?.content;
-  if (!content) throw new Error('No content in Groq synthesis response');
-
+  const content = await parseGroqJson(res);
   console.log('[groq] synthesis complete');
   const parsed = JSON.parse(content) as RawSynthesis;
 
@@ -734,10 +742,7 @@ export async function generateDecisions(
   });
 
   if (!res.ok) throw new Error(`Groq decisions ${res.status}: ${await res.text()}`);
-  const data = await res.json() as { choices: Array<{ message: { content: string } }> };
-  const content = data.choices[0]?.message?.content;
-  if (!content) throw new Error('No content in Groq decisions response');
-
+  const content = await parseGroqJson(res);
   const parsed = JSON.parse(content) as RawDecision[] | { decisions?: RawDecision[] };
   const arr = Array.isArray(parsed) ? parsed : (parsed.decisions ?? []);
   console.log(`[groq] generated ${arr.length} decisions`);
@@ -816,10 +821,7 @@ export async function generateDecisionsFromSynthesis(data: {
   });
 
   if (!res.ok) throw new Error(`Groq decisions-from-synthesis ${res.status}: ${await res.text()}`);
-  const responseData = await res.json() as { choices: Array<{ message: { content: string } }> };
-  const content = responseData.choices[0]?.message?.content;
-  if (!content) throw new Error('No content in response');
-
+  const content = await parseGroqJson(res);
   const parsed = JSON.parse(content) as RawDecision[] | { decisions?: RawDecision[] };
   const arr = Array.isArray(parsed) ? parsed : (parsed.decisions ?? []);
   console.log(`[groq] generated ${arr.length} decisions from synthesis`);
@@ -945,9 +947,7 @@ export async function generateProblems(data: {
   });
 
   if (!res.ok) throw new Error(`Groq problems ${res.status}: ${await res.text()}`);
-  const responseData = await res.json() as { choices: Array<{ message: { content: string } }> };
-  const content = responseData.choices[0]?.message?.content;
-  if (!content) throw new Error('No content in response');
+  const content = await parseGroqJson(res);
   console.log('[groq] problem analysis complete');
   console.log('[groq] raw problems JSON:', content.slice(0, 300));
   return JSON.parse(content) as RawProblemsResult;
@@ -1173,9 +1173,7 @@ export async function generateBriefing(data: {
   }, 120000);
 
   if (!res.ok) throw new Error(`Groq briefing ${res.status}: ${await res.text()}`);
-  const responseData = await res.json() as { choices: Array<{ message: { content: string } }> };
-  const content = responseData.choices[0]?.message?.content;
-  if (!content) throw new Error('No content in briefing response');
+  const content = await parseGroqJson(res);
   console.log('[groq] briefing complete');
   return JSON.parse(content) as RawBriefing;
 }

@@ -8,6 +8,7 @@ import { reportRouter } from './routes/report';
 import { decisionsRouter } from './routes/decisions';
 import { problemsRouter } from './routes/problems';
 import { briefingRouter } from './routes/briefing';
+import { statusRouter } from './routes/status';
 
 const app = express();
 const PORT = process.env.PORT ?? 3001;
@@ -22,6 +23,7 @@ app.use('/api/report', reportRouter);
 app.use('/api/decisions', decisionsRouter);
 app.use('/api/problems', problemsRouter);
 app.use('/api/briefing', briefingRouter);
+app.use('/api', statusRouter);
 
 app.get('/api/health', (_req, res) => {
   res.json({

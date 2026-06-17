@@ -4,6 +4,27 @@ const interviews = new Map<string, Interview>();
 const insights   = new Map<string, Insight>();
 const decisions  = new Map<string, Decision>();
 
+// ── Token usage tracking (rolling 60-second window, mirrors Groq TPM limit) ───
+
+const TPM_LIMIT  = 6000;
+const TPM_WINDOW = 60_000; // ms
+
+interface TokenEntry { tokens: number; timestamp: number }
+const tokenLog: TokenEntry[] = [];
+
+export function recordTokenUsage(tokens: number): void {
+  tokenLog.push({ tokens, timestamp: Date.now() });
+  const cutoff = Date.now() - TPM_WINDOW * 2;
+  while (tokenLog.length > 0 && tokenLog[0].timestamp < cutoff) tokenLog.shift();
+}
+
+export function getTokenStatus(): { used: number; limit: number; remaining: number } {
+  const cutoff = Date.now() - TPM_WINDOW;
+  const used = tokenLog
+    .filter(e => e.timestamp >= cutoff)
+    .reduce((sum, e) => sum + e.tokens, 0);
+  return { used, limit: TPM_LIMIT, remaining: Math.max(0, TPM_LIMIT - used) };
+}
 
 // ── Problems & Briefing (singleton — replaced on each generation) ─────────────
 
