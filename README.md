@@ -1,298 +1,152 @@
 # AI UX Research Copilot
 
-An AI-powered full-stack platform that assists UX researchers in analyzing user feedback, generating insights, and producing structured research reports.
+Turns raw UX research material — interview transcripts, survey exports, feedback documents — into structured, reviewable insights.
+
+**Live**: [add URL after deployment]
+**Stack**: React · TypeScript · Vite · Node.js · Express · OpenAI
 
 ---
 
-## 🚀 Overview
+## Why this exists
 
-AI UX Research Copilot is a full-stack application designed to streamline UX research workflows. It enables users to upload documents, extract insights using AI, and generate structured reports for product and design decision-making.
+Qualitative synthesis is the slowest part of UX research and the easiest part to do badly. Reading fifty interview transcripts to find recurring pain points takes days, and the result depends heavily on what the researcher happened to notice.
 
-The system consists of:
+An LLM is good at the pattern-finding half of that job and bad at the judgement half. So this tool is built on one assumption: the model proposes, the researcher decides. Every design decision below follows from that.
 
-* **Frontend**: Modern React + TypeScript UI (Vite)
-* **Backend**: Node.js + Express API service
-* **AI Layer**: OpenAI-powered analysis engine (supports mock mode for development)
+## What it does
 
----
-
-## ✨ Key Features
-
-* 📄 Upload UX research documents (PDF, text, etc.)
-* 🧠 AI-powered analysis of user feedback
-* 📊 Structured insight generation (themes, pain points, opportunities)
-* 📝 Auto-generated UX research reports
-* ⚡ Fast development mode with mock AI fallback
-* 🔌 RESTful API architecture
+* Upload research documents (PDF, DOCX, plain text)
+* Extract and structure raw text from mixed-format sources
+* Generate thematic clusters, pain points, and opportunity areas
+* Produce a structured research report from reviewed insights
 
 ---
 
-## 🧱 Tech Stack
+## AI Interaction Design Decisions
 
-### Frontend
+This is the part of the project I care most about. Notes on what is built, what is planned, and why.
 
-* React
-* TypeScript
-* Vite
-* Axios
+### Built
+
+**Mock mode as a first-class path, not a debug flag**
+When no API key is configured, the backend serves structured mock responses instead of failing. This started as a way to develop the front end without burning API credits, but it turned into something more useful: it forces every UI state to be reachable without depending on a live model. If a state can only be produced by a real API call, it tends not to get designed properly.
+*Trade-off*: mock data can drift from real model output. It has to be updated whenever the prompt or schema changes, and that is manual today.
+
+**Structured output over conversational output**
+The LLM is not exposed as a chat interface. It returns a fixed schema — themes, pain points, opportunities — which the UI renders as reviewable objects. Why: a chat response is hard to review systematically. You cannot mark half a paragraph as "accepted" and half as "wrong". Structured output makes each claim individually reviewable, which is the whole point of the tool.
+*Trade-off*: loses the flexibility of open-ended follow-up questions.
+
+<!-- 补充你实际做过的其他决策，每条写：做了什么 / 为什么 / 取舍是什么 -->
+
+### Planned
+
+Ordered by how much they affect trust in the output.
+
+1. **Streaming pipeline progress (SSE)**
+   Analysis currently returns as a single response, so the user waits with no signal for as long as the model takes. Moving to server-sent events lets the UI show which stage the pipeline is in — extracting, chunking, analysing, clustering, synthesising — and surface partial results as they land.
+   Why SSE over WebSocket: the data flows one way, server to client. SSE is native to HTTP, reconnects automatically, and needs no additional protocol handling.
+
+2. **Schema validation with explicit degradation**
+   LLM output will eventually fail to parse. Planned handling: validate against a Zod schema, retry once on failure, and if it fails again, show an explicit error state rather than passing malformed data to the UI. No silent partial rendering.
+
+3. **Source attribution**
+   Every generated insight should carry the passage it came from, expandable inline. An insight the researcher cannot trace back to a document is a claim, not a finding — and the interface should make that distinction visible rather than presenting all output with equal confidence.
+
+4. **Differentiated failure states**
+   "Something went wrong" tells the user nothing about whether to retry, change the file, or give up. Distinct states planned for: scanned PDFs with no extractable text, malformed model output, timeouts, and documents too short to support reliable analysis.
+
+5. **Human-in-the-loop review**
+   Each insight gets accept / edit / reject controls, and only accepted insights enter the final report. The UI shows review progress, so the researcher always knows how much of the output they have actually vetted. This is the feature the whole design rests on: it makes the researcher's judgement a required step rather than an optional one.
+
+---
+
+## Architecture Decisions & Trade-offs
+
+**Express over Next.js**
+The front end and back end are deployed separately, and the back end does file parsing and model orchestration that does not benefit from server-side rendering. Splitting them keeps the API independently deployable and testable.
+*Trade-off*: two deployment targets, CORS configuration, and no shared types across the boundary without extra tooling.
+
+**REST over GraphQL**
+Three endpoints, one client, no over-fetching problem to solve. GraphQL would add a schema layer and resolver overhead for no benefit at this size.
+*Revisit when*: the client needs to compose queries across many resources.
+
+**TypeScript end to end**
+The shape of LLM output is the least predictable part of the system, so the boundary where it enters the application is where types matter most. Typing it end to end means a schema change surfaces at compile time rather than as a runtime render error.
+
+**Parsing on the server**
+`pdf-parse` and `mammoth` run server-side rather than in the browser. Keeps the client light, keeps parsing behaviour consistent across browsers, and avoids shipping parser bundles to users who upload plain text.
+*Trade-off*: every upload costs a round trip and server memory.
+
+<!-- 部署完成后补一节：Deployment，写你实际遇到的问题和怎么解决的 -->
+
+---
+
+## Known limitations
+
+* No test coverage yet — Playwright smoke tests are the next priority
+* No rate limiting on the analyse endpoint; required before the public deployment is shared widely
+* Mock fixtures are maintained by hand and can drift from real model output
+* Single-user; no persistence between sessions
+
+---
+
+## Running locally
 
 ### Backend
 
-* Node.js
-* Express
-* TypeScript
-* Multer (file uploads)
-* OpenAI SDK
-
-### AI / Processing
-
-* OpenAI GPT models
-* PDF parsing (`pdf-parse`)
-* Document extraction (`mammoth`)
-
----
-
-## 📁 Project Structure
-
-```
-ai-ux-research-copilot/
-│
-├── backend/
-│   ├── src/
-│   ├── package.json
-│   └── dist/
-│
-├── frontend/
-│   ├── src/
-│   │   ├── pages/
-│   │   ├── api/
-│   │   └── components/
-│   ├── package.json
-│   └── vite.config.ts
-│
-└── README.md
-```
-
----
-
-## ⚙️ Getting Started
-
-### 1. Clone the repository
-
-```bash
-git clone https://github.com/<your-username>/ai-ux-research-copilot.git
-cd ai-ux-research-copilot
-```
-
----
-
-### 2. Install dependencies
-
-#### Backend
-
 ```bash
 cd backend
 npm install
+npm run dev          # http://localhost:3001
 ```
 
-#### Frontend
-
-```bash
-cd ../frontend
-npm install
-```
-
----
-
-### 3. Run development servers
-
-#### Backend
-
-```bash
-cd backend
-npm run dev
-```
-
-Server runs at:
-
-```
-http://localhost:3001
-```
-
-#### Frontend
+### Frontend
 
 ```bash
 cd frontend
-npm run dev
+npm install
+npm run dev          # http://localhost:5173
 ```
 
-Frontend runs at:
+### Environment
 
-```
-http://localhost:5173
-```
-
----
-
-## 🔑 Environment Variables
-
-Create a `.env` file in the `backend` directory:
+Create `backend/.env`:
 
 ```env
-OPENAI_API_KEY=your_api_key_here
+OPENAI_API_KEY=your_key_here
 PORT=3001
 ```
 
-If no API key is provided, the system will run in **Mock AI mode**.
+Without a key, the backend runs in mock mode.
 
 ---
 
-## 🧪 Development Mode
+## API
 
-When no OpenAI key is configured, the backend automatically switches to:
-
-```
-Mock AI Mode
-```
-
-This allows full frontend-backend testing without API costs.
+| Method | Endpoint       | Purpose                                          |
+| ------ | -------------- | ------------------------------------------------- |
+| POST   | `/api/upload`  | Accept and parse a research document              |
+| POST   | `/api/analyze` | Run the analysis pipeline over extracted text      |
+| POST   | `/api/report`  | Generate a structured report from reviewed insights |
 
 ---
 
-## 📦 API Endpoints
-
-### Upload file
+## Architecture
 
 ```
-POST /api/upload
-```
-
-### Analyze document
-
-```
-POST /api/analyze
-```
-
-### Generate report
-
-```
-POST /api/report
+Frontend (React + TypeScript + Vite)
+    │  REST
+    ▼
+Backend (Node.js + Express)
+    │
+    ├── Document parsing      pdf-parse · mammoth · plain text
+    ├── AI analysis layer     OpenAI · mock fallback
+    └── Insight structuring   themes · pain points · opportunities
+    │
+    ▼
+Structured insights → report
 ```
 
 ---
 
-## 🛠️ Future Improvements
-
-* Real-time collaborative UX research workspace
-* Vector database integration (Pinecone / Weaviate)
-* Advanced clustering of user feedback
-* Export to Notion / Figma / Google Docs
-* Authentication system
-
----
-
-## 👨‍💻 Author
-
-Built by **kaylee lujie**
-
----
-
-## 📄 License
-
-This project is for educational and portfolio purposes.
-
-## 🧠 AI Workflow Architecture
-                ┌────────────────────────┐
-                │      Frontend (React)  │
-                │  - Upload UX files     │
-                │  - View insights       │
-                │  - Generate reports    │
-                └──────────┬─────────────┘
-                           │
-                           │ REST API (Axios)
-                           ▼
-        ┌────────────────────────────────────┐
-        │        Backend (Node.js)          │
-        │  Express API Layer                │
-        │  - /upload                       │
-        │  - /analyze                      │
-        │  - /report                       │
-        └──────────┬────────────────────────┘
-                   │
-                   │ File Processing Pipeline
-                   ▼
-     ┌──────────────────────────────────────┐
-     │     Document Processing Layer        │
-     │  - PDF Parser (pdf-parse)           │
-     │  - DOCX Parser (mammoth)            │
-     │  - Text Extraction                  │
-     └──────────┬──────────────────────────┘
-                │
-                ▼
-     ┌──────────────────────────────────────┐
-     │        AI Analysis Layer             │
-     │  - OpenAI GPT (or Mock Mode)        │
-     │  - Thematic Analysis                │
-     │  - Pain Point Extraction            │
-     │  - Insight Generation               │
-     └──────────┬──────────────────────────┘
-                │
-                ▼
-     ┌──────────────────────────────────────┐
-     │     Insight Structuring Layer       │
-     │  - UX Themes                        │
-     │  - Opportunity Mapping              │
-     │  - Summary Generation               │
-     └──────────┬──────────────────────────┘
-                │
-                ▼
-        ┌────────────────────────┐
-        │   Structured Output     │
-        │  - Insights JSON        │
-        │  - UX Report            │
-        └────────────────────────┘
-
-
-
-# 💼 Project Highlights (Portfolio Ready)
-This project demonstrates a real-world AI product workflow, combining document processing, AI-driven analysis, and structured UX insight generation.
-
----
-
-### 🎯 Problem Statement
-UX researchers spend significant time manually analyzing qualitative user feedback from interviews, surveys, and research reports.
-
-### 💡 Solution: AI UX Research Copilot
-The **AI UX Research Copilot** automates this workflow by:
-* **Extracting** raw insights from UX documents.
-* **Identifying** patterns and pain points using AI.
-* **Generating** structured UX research outputs.
-* **Reducing** manual analysis time from hours to minutes.
-
----
-
-### ⚙️ System Design Thinking
-This project demonstrates advanced engineering principles across the technical stack:
-* **Full-stack architecture design** – Scalable structure built for real-world reliability.
-* **AI pipeline integration** – Orchestrating document content seamlessly with generative models.
-* **Document ingestion & parsing system** – Secure, efficient parsing of unstructured text.
-* **Structured data generation** – Advanced LLM output shaping to ensure predictable schema formats.
-* **Fallback strategy** – Automated Mock AI mode for offline stability and offline development.
-
----
-
-### 🧠 AI Design Approach
-Instead of using AI as a simple conversational chatbot, this system treats the LLM as a highly sophisticated **Structured Insight Engine**. It actively executes:
-* 🧩 **Thematic clustering** of open-ended feedback.
-* 📊 **Sentiment + pain point** detection.
-* 🚀 **Opportunity identification** for product feature mapping.
-* 📝 **UX report synthesis** tailored to stakeholders.
-
----
-
-### 🔥 Engineering Highlights
-* **Modular Backend API Design** – Built using a scalable architecture that isolates responsibilities.
-* **Multi-Format Document Support** – Native processing capability for PDF, DOCX, and raw text files.
-* **AI Fallback Mode** – Ensures resilience and local reliability during offline testing or API service limits.
-* **Separation of Concerns** – Clear, maintainable boundaries between the core business logic and the AI orchestration layer.
-* **TypeScript-Based Safety** – Full-stack type safety ensuring predictability from data ingestion to UI display.
+Built by [Kaylee Shao](portfolio)
